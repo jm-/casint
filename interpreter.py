@@ -2,19 +2,41 @@
 VARIABLE = 'VARIABLE'
 ASSIGN = 'ASSIGN'
 INTEGER = 'INTEGER'
+STRING = 'STRING'
 PLUS = 'PLUS'
 MINUS = 'MINUS'
 MUL = 'MUL'
 DIV = 'DIV'
 LPAREN = '('
 RPAREN = ')'
+LBRACE = '{'
+RBRACE = '}'
+MAT = 'MAT'
+COMMA = 'COMMA'
+AND = 'AND'
+OR = 'OR'
+NOT = 'NOT'
+EQ = 'EQ'
+NEQ = 'NEQ'
+GT = 'GT'
+LT = 'LT'
+GTE = 'GTE'
+LTE = 'LTE'
+DIM = 'DIM'
 CLS = 'CLS'
 RCLPICT = 'RCLPICT'
 VIEWWINDOW = 'VIEWWINDOW'
 IF = 'IF'
+THEN = 'THEN'
+ELSE = 'ELSE'
+IFEND = 'IFEND'
 DO = 'DO'
+LPWHILE = 'LPWHILE'
+BREAK = 'BREAK'
 EOF = 'EOF'
 SEMI = 'SEMI'
+PROG = 'PROG'
+TEXT = 'TEXT'
 
 
 class Token(object):
@@ -33,7 +55,7 @@ class Token(object):
 
 
 def is_variable(char):
-    return char in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    return char in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ\xce'
 
 
 class Lexer(object):
@@ -52,6 +74,13 @@ class Lexer(object):
             self.current_char = None  # Indicates end of input
         else:
             self.current_char = self.text[self.pos]
+
+    def freeze(self):
+        return self.pos
+
+    def seek(self, pos):
+        self.pos = pos
+        self.current_char = self.text[self.pos]
 
     def peek(self):
         peek_pos = self.pos + 1
@@ -72,6 +101,16 @@ class Lexer(object):
             self.advance()
         return int(result)
 
+    def string(self):
+        result = ''
+        self.advance()
+        while self.current_char is not None and self.current_char != '"':
+            # todo: process non-characters into string
+            result += self.current_char
+            self.advance()
+        self.advance()
+        return result
+
     def get_next_token(self):
         """Lexical analyzer (also known as scanner or tokenizer)
         This method is responsible for breaking a sentence
@@ -89,44 +128,89 @@ class Lexer(object):
                 self.advance()
                 return Token(VIEWWINDOW, 'ViewWindow')
 
-            if self.current_char == '\xf7' and self.peek() == '\x94':
+            if self.current_char == '\xed':
+                self.advance()
+                return Token(PROG, 'Prog')
+
+            if self.current_char == '\x7f' and self.peek() == '\x40':
                 self.advance()
                 self.advance()
-                return Token(RCLPICT, 'RclPict')
+                return Token(MAT, 'Mat')
+
+            if self.current_char == '\x7f' and self.peek() == '\x46':
+                self.advance()
+                self.advance()
+                return Token(DIM, 'Dim')
 
             if self.current_char == '\xf7' and self.peek() == '\x00':
                 self.advance()
                 self.advance()
                 return Token(IF, 'If')
 
+            if self.current_char == '\xf7' and self.peek() == '\x01':
+                self.advance()
+                self.advance()
+                return Token(THEN, 'Then')
+
+            if self.current_char == '\xf7' and self.peek() == '\x03':
+                self.advance()
+                self.advance()
+                return Token(IFEND, 'IfEnd')
+
             if self.current_char == '\xf7' and self.peek() == '\x0a':
                 self.advance()
                 self.advance()
                 return Token(DO, 'Do')
 
+            if self.current_char == '\xf7' and self.peek() == '\x0d':
+                self.advance()
+                self.advance()
+                return Token(BREAK, 'Break')
+
+            if self.current_char == '\xf7' and self.peek() == '\x94':
+                self.advance()
+                self.advance()
+                return Token(RCLPICT, 'RclPict')
+
+            if self.current_char == '\xf7' and self.peek() == '\xa5':
+                self.advance()
+                self.advance()
+                return Token(TEXT, 'Text')
+
             if self.current_char == '\x00':
                 self.skip_null()
                 continue
+
+            if self.current_char == ',':
+                self.advance()
+                return Token(COMMA, ',')
 
             if self.current_char == ':':
                 self.advance()
                 return Token(SEMI, ':')
 
+            if self.current_char == '=':
+                self.advance()
+                return Token(EQ, '==')
+
             if self.current_char == '\x0d':
                 self.advance()
                 return Token(SEMI, 'EOL')
 
-            if is_variable(self.current_char):
+            if self.current_char == '\x0e':
                 self.advance()
-                return Token(VARIABLE, self.current_char)
+                return Token(ASSIGN, '=>')
+
+            if is_variable(self.current_char):
+                token = Token(VARIABLE, self.current_char)
+                self.advance()
+                return token
 
             if self.current_char.isdigit():
                 return Token(INTEGER, self.integer())
 
-            if self.current_char == ':' and self.peek() == '=':
-                self.advance()
-                self.advance()
-                return Token(ASSIGN, ':=')
+            if self.current_char == '"':
+                return Token(STRING, self.string())
 
             if self.current_char == '+':
                 self.advance()
@@ -152,6 +236,14 @@ class Lexer(object):
                 self.advance()
                 return Token(RPAREN, ')')
 
+            if self.current_char == '{':
+                self.advance()
+                return Token(LBRACE, '{')
+
+            if self.current_char == '}':
+                self.advance()
+                return Token(RBRACE, '}')
+
             self.error()
 
         return Token(EOF, None)
@@ -161,22 +253,37 @@ class AST(object):
     pass
 
 
+class MemoryStructure(AST):
+    def __init__(self, op, token):
+        self.op = op
+        self.token = token
+
+
 class BinOp(AST):
     def __init__(self, left, op, right):
         self.left = left
-        self.token = self.op = op
+        self.op = op
         self.right = right
 
 
 class Num(AST):
     def __init__(self, token):
-        self.token = token
+        self.value = token.value
+
+
+class StringLit(AST):
+    def __init__(self, token):
+        self.value = token.value
+
+
+class Var(AST):
+    def __init__(self, token):
         self.value = token.value
 
 
 class UnaryOp(AST):
     def __init__(self, op, expr):
-        self.token = self.op = op
+        self.op = op
         self.expr = expr
 
 
@@ -185,38 +292,55 @@ class Program(AST):
         self.children = []
 
 
+class IfThen(AST):
+    def __init__(self, condition):
+        self.condition = condition
+        self.if_clause = []
+        self.else_clause = []
+
+
 class DoLpWhile(AST):
     def __init__(self):
-
-
-        # todo...
-
         self.children = []
+        self.condition = None
 
 
 class NullaryBuiltin(AST):
     def __init__(self, op):
-        self.token = self.op = op
+        self.op = op
 
 
 class UnaryBuiltin(AST):
     def __init__(self, op, arg1):
-        self.token = self.op = op
+        self.op = op
         self.arg1 = arg1
 
 
+class BinaryBuiltin(AST):
+    def __init__(self, op, arg1, arg2):
+        self.op = op
+        self.arg1 = arg1
+        self.arg2 = arg2
+
+
+class TernaryBuiltin(AST):
+    def __init__(self, op, arg1, arg2, arg3):
+        self.op = op
+        self.arg1 = arg1
+        self.arg2 = arg2
+        self.arg3 = arg3
+
+
 class Assign(AST):
-    def __init__(self, left, op, right):
+    def __init__(self, left, right):
         self.left = left
-        self.token = self.op = op
         self.right = right
 
 
-class Var(AST):
-    """The Var node is constructed out of ID token."""
-    def __init__(self, token):
-        self.token = token
-        self.value = token.value
+class Initialize(AST):
+    def __init__(self, left, right):
+        self.left = left
+        self.right = right
 
 
 class NoOp(AST):
@@ -241,6 +365,19 @@ class Parser(object):
             self.current_token = self.lexer.get_next_token()
         else:
             self.error()
+
+    def try_expr(self):
+        # tries to read an expression from the lexer
+        pos = self.lexer.freeze()
+        token = self.current_token
+        try:
+            self.expr()
+            return True
+        except:
+            return False
+        finally:
+            self.lexer.seek(pos)
+            self.current_token = token
 
     def program(self):
         """
@@ -280,16 +417,99 @@ class Parser(object):
             self.eat(CLS)
             node = NullaryBuiltin(token)
 
-        elif token.type == RCLPICT:
-            self.eat(RCLPICT)
-            node = UnaryBuiltin(token, self.num_limited(1, 6))
+        elif token.type == BREAK:
+            self.eat(BREAK)
+            node = NullaryBuiltin(token)
+
+        elif token.type == IF:
+            node = self.if_then()
 
         elif token.type == DO:
-            self.eat(DO)
+            node = self.do_loop_while()
+
+        elif token.type == PROG:
+            self.eat(PROG)
+            node = UnaryBuiltin(token, self.string_literal())
+
+        elif token.type == RCLPICT:
+            self.eat(RCLPICT)
+            node = UnaryBuiltin(token, self.num_limited(1, 20))
+
+        elif token.type == TEXT:
+            self.eat(TEXT)
+            arg1 = self.num()
+            self.eat(COMMA)
+            arg2 = self.num()
+            self.eat(COMMA)
+            arg3 = self.string_literal()
+            node = TernaryBuiltin(token, arg1, arg2, arg3)
+
+        elif token.type == LBRACE:
+            node = self.initialize_memory()
 
         else:
-            node = self.empty()
+            # read ahead. it might be part of an assignment statement
+            if self.try_expr():
+                node = self.assignment_statement()
 
+            else:
+                node = self.empty()
+
+
+        print 'statement ->', node
+        return node
+
+    def if_then(self):
+        self.eat(IF)
+        root = IfThen(self.condition())
+        self.eat(SEMI)
+        self.eat(THEN)
+        nodes = self.statement_list()
+        for node in nodes:
+            root.if_clause.append(node)
+        if self.current_token.type == ELSE:
+            self.eat(ELSE)
+            nodes = self.statement_list()
+            for node in nodes:
+                root.else_clause.append(node)
+        self.eat(IFEND)
+
+    def do_loop_while(self):
+        root = DoLpWhile()
+        self.eat(DO)
+        self.eat(SEMI)
+        nodes = self.statement_list()
+        for node in nodes:
+            root.children.append(node)
+        self.eat(LPWHILE)
+        root.condition = self.condition()
+        return root
+
+    def initialize_memory(self):
+        self.eat(LBRACE)
+        x = self.num()
+        self.eat(COMMA)
+        y = self.num()
+        self.eat(RBRACE)
+        self.eat(ASSIGN)
+        self.eat(DIM)
+        right = self.memory_structure()
+        node = Initialize((x, y), right)
+        return node
+
+    def memory_structure(self):
+        # TODO: support list too!
+        op = self.current_token
+        self.eat(MAT)
+        token = self.current_token
+        self.eat(VARIABLE)
+        node = MemoryStructure(op, token)
+        return node
+
+
+    def num(self):
+        node = Num(self.current_token)
+        self.eat(INTEGER)
         return node
 
     def num_limited(self, lower, upper):
@@ -299,15 +519,16 @@ class Parser(object):
             self.error()
         return node
 
+    def string_literal(self):
+        node = StringLit(self.current_token)
+        self.eat(STRING)
+        return node
+
     def assignment_statement(self):
-        """
-        assignment_statement : variable ASSIGN expr
-        """
-        left = self.variable()
-        token = self.current_token
+        left = self.expr()
         self.eat(ASSIGN)
-        right = self.expr()
-        node = Assign(left, token, right)
+        right = self.variable()
+        node = Assign(left, right)
         return node
 
     def variable(self):
@@ -321,6 +542,67 @@ class Parser(object):
     def empty(self):
         """An empty production"""
         return NoOp()
+
+    def condition(self):
+        """
+        condition : and_condition (OR and_condition)*
+        """
+        node = self.and_condition()
+
+        while self.current_token.type == OR:
+            token = self.current_token
+            self.eat(OR)
+
+            node = BinOp(left=node, op=token, right=self.and_condition())
+
+        return node
+
+    def and_condition(self):
+        """
+        and_condition : bexp (AND bexp)*
+        """
+        node = self.bexp()
+
+        while self.current_token.type == AND:
+            token = self.current_token
+            self.eat(AND)
+
+            node = BinOp(left=node, op=token, right=self.bexp())
+
+        return node
+
+    def bexp(self):
+        token = self.current_token
+        print token
+        if token.type == NOT:
+            self.eat(NOT)
+            node = UnaryOp(token, self.condition())
+            return node
+        elif token.type == LPAREN:
+            self.eat(LPAREN)
+            node = self.condition()
+            self.eat(RPAREN)
+            return node
+        
+        left = self.expr()
+        token = self.current_token
+        print token
+
+        if token.type == EQ:
+            self.eat(EQ)
+        elif token.type == NEQ:
+            self.eat(NEQ)
+        elif token.type == GT:
+            self.eat(GT)
+        elif token.type == LT:
+            self.eat(LT)
+        elif token.type == GTE:
+            self.eat(GTE)
+        else:
+            self.eat(LTE)
+        
+        node = BinOp(left=left, op=token, right=self.expr())
+        return node
 
     def expr(self):
         """
@@ -362,6 +644,7 @@ class Parser(object):
                   | variable
         """
         token = self.current_token
+        print token
         if token.type == PLUS:
             self.eat(PLUS)
             node = UnaryOp(token, self.factor())
