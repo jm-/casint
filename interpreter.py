@@ -11,6 +11,9 @@ LPAREN = '('
 RPAREN = ')'
 LBRACE = '{'
 RBRACE = '}'
+LBRACKET = '['
+RBRACKET = ']'
+VARIABLERANGE = 'VARIABLERANGE'
 MAT = 'MAT'
 COMMA = 'COMMA'
 AND = 'AND'
@@ -24,15 +27,30 @@ GTE = 'GTE'
 LTE = 'LTE'
 DIM = 'DIM'
 CLS = 'CLS'
+STOPICT = 'STOPICT'
 RCLPICT = 'RCLPICT'
 VIEWWINDOW = 'VIEWWINDOW'
+FLINE = 'FLINE'
+INLINEIF = 'INLINEIF'
+ISZ = 'ISZ'
+DSZ = 'DSZ'
+INTG = 'INTG'
+RANDNUM = 'RANDNUM'
+GETKEY = 'GETKEY'
 IF = 'IF'
 THEN = 'THEN'
 ELSE = 'ELSE'
 IFEND = 'IFEND'
+FOR = 'FOR'
+TO = 'TO'
+STEP = 'STEP'
+NEXT = 'NEXT'
+WHILE = 'WHILE'
+WHILEEND = 'WHILEEND'
 DO = 'DO'
 LPWHILE = 'LPWHILE'
 BREAK = 'BREAK'
+STOP = 'STOP'
 EOF = 'EOF'
 SEMI = 'SEMI'
 PROG = 'PROG'
@@ -55,7 +73,7 @@ class Token(object):
 
 
 def is_variable(char):
-    return char in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ\xce'
+    return char in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ\xcd\xce'
 
 
 class Lexer(object):
@@ -70,7 +88,7 @@ class Lexer(object):
     def advance(self):
         """Advance the `pos` pointer and set the `current_char` variable."""
         self.pos += 1
-        if self.pos > len(self.text) - 1:
+        if self.pos >= len(self.text):
             self.current_char = None  # Indicates end of input
         else:
             self.current_char = self.text[self.pos]
@@ -118,11 +136,17 @@ class Lexer(object):
         """
         while self.current_char is not None:
 
-            print repr(self.current_char)
-
             if self.current_char == '\xd1':
                 self.advance()
                 return Token(CLS, 'Cls')
+
+            if self.current_char == '\xe8':
+                self.advance()
+                return Token(DSZ, 'Dsz ')
+
+            if self.current_char == '\xe9':
+                self.advance()
+                return Token(ISZ, 'Isz ')
 
             if self.current_char == '\xeb':
                 self.advance()
@@ -132,50 +156,128 @@ class Lexer(object):
                 self.advance()
                 return Token(PROG, 'Prog')
 
+            if self.current_char == '\xde':
+                self.advance()
+                return Token(INTG, 'Intg ')
+
+            if self.current_char == '\xc1':
+                self.advance()
+                return Token(RANDNUM, 'Ran# ')
+
             if self.current_char == '\x7f' and self.peek() == '\x40':
                 self.advance()
                 self.advance()
-                return Token(MAT, 'Mat')
+                return Token(MAT, 'Mat ')
 
             if self.current_char == '\x7f' and self.peek() == '\x46':
                 self.advance()
                 self.advance()
                 return Token(DIM, 'Dim')
 
+            if self.current_char == '\x7f' and self.peek() == '\x8f':
+                self.advance()
+                self.advance()
+                return Token(GETKEY, 'Getkey')
+
+            if self.current_char == '\x7f' and self.peek() == '\xb0':
+                self.advance()
+                self.advance()
+                return Token(AND, ' And ')
+
+            if self.current_char == '\x7f' and self.peek() == '\xb1':
+                self.advance()
+                self.advance()
+                return Token(OR, ' Or ')
+
             if self.current_char == '\xf7' and self.peek() == '\x00':
                 self.advance()
                 self.advance()
-                return Token(IF, 'If')
+                return Token(IF, 'If ')
 
             if self.current_char == '\xf7' and self.peek() == '\x01':
                 self.advance()
                 self.advance()
-                return Token(THEN, 'Then')
+                return Token(THEN, 'Then ')
+
+            if self.current_char == '\xf7' and self.peek() == '\x02':
+                self.advance()
+                self.advance()
+                return Token(ELSE, 'Else')
 
             if self.current_char == '\xf7' and self.peek() == '\x03':
                 self.advance()
                 self.advance()
                 return Token(IFEND, 'IfEnd')
 
+            if self.current_char == '\xf7' and self.peek() == '\x04':
+                self.advance()
+                self.advance()
+                return Token(FOR, 'For ')
+
+            if self.current_char == '\xf7' and self.peek() == '\x05':
+                self.advance()
+                self.advance()
+                return Token(TO, 'To ')
+
+            if self.current_char == '\xf7' and self.peek() == '\x06':
+                self.advance()
+                self.advance()
+                return Token(STEP, 'Step ')
+
+            if self.current_char == '\xf7' and self.peek() == '\x07':
+                self.advance()
+                self.advance()
+                return Token(NEXT, 'Next')
+
+            if self.current_char == '\xf7' and self.peek() == '\x08':
+                self.advance()
+                self.advance()
+                return Token(WHILE, 'While ')
+
+            if self.current_char == '\xf7' and self.peek() == '\x09':
+                self.advance()
+                self.advance()
+                return Token(WHILEEND, 'WhileEnd')
+
             if self.current_char == '\xf7' and self.peek() == '\x0a':
                 self.advance()
                 self.advance()
                 return Token(DO, 'Do')
+
+            if self.current_char == '\xf7' and self.peek() == '\x0b':
+                self.advance()
+                self.advance()
+                return Token(LPWHILE, 'LpWhile ')
 
             if self.current_char == '\xf7' and self.peek() == '\x0d':
                 self.advance()
                 self.advance()
                 return Token(BREAK, 'Break')
 
+            if self.current_char == '\xf7' and self.peek() == '\x0e':
+                self.advance()
+                self.advance()
+                return Token(STOP, 'Stop')
+
+            if self.current_char == '\xf7' and self.peek() == '\x93':
+                self.advance()
+                self.advance()
+                return Token(STOPICT, 'StoPict ')
+
             if self.current_char == '\xf7' and self.peek() == '\x94':
                 self.advance()
                 self.advance()
-                return Token(RCLPICT, 'RclPict')
+                return Token(RCLPICT, 'RclPict ')
 
             if self.current_char == '\xf7' and self.peek() == '\xa5':
                 self.advance()
                 self.advance()
                 return Token(TEXT, 'Text')
+
+            if self.current_char == '\xf7' and self.peek() == '\xa7':
+                self.advance()
+                self.advance()
+                return Token(FLINE, 'F-Line')
 
             if self.current_char == '\x00':
                 self.skip_null()
@@ -193,13 +295,33 @@ class Lexer(object):
                 self.advance()
                 return Token(EQ, '==')
 
+            if self.current_char == '\x10':
+                self.advance()
+                return Token(LTE, '<=')
+
+            if self.current_char == '\x11':
+                self.advance()
+                return Token(NEQ, '!=')
+
+            if self.current_char == '\x3c':
+                self.advance()
+                return Token(LT, '<')
+
+            if self.current_char == '\x3e':
+                self.advance()
+                return Token(GT, '>')
+
+            if self.current_char == '\x13':
+                self.advance()
+                return Token(INLINEIF, '=>')
+
             if self.current_char == '\x0d':
                 self.advance()
                 return Token(SEMI, 'EOL')
 
             if self.current_char == '\x0e':
                 self.advance()
-                return Token(ASSIGN, '=>')
+                return Token(ASSIGN, '->')
 
             if is_variable(self.current_char):
                 token = Token(VARIABLE, self.current_char)
@@ -212,11 +334,11 @@ class Lexer(object):
             if self.current_char == '"':
                 return Token(STRING, self.string())
 
-            if self.current_char == '+':
+            if self.current_char == '\x89':
                 self.advance()
                 return Token(PLUS, '+')
 
-            if self.current_char == '-':
+            if self.current_char == '\x99':
                 self.advance()
                 return Token(MINUS, '-')
 
@@ -224,7 +346,7 @@ class Lexer(object):
                 self.advance()
                 return Token(MUL, '*')
 
-            if self.current_char == '/':
+            if self.current_char == '\xb9':
                 self.advance()
                 return Token(DIV, '/')
 
@@ -244,6 +366,18 @@ class Lexer(object):
                 self.advance()
                 return Token(RBRACE, '}')
 
+            if self.current_char == '[':
+                self.advance()
+                return Token(LBRACKET, '[')
+
+            if self.current_char == ']':
+                self.advance()
+                return Token(RBRACKET, ']')
+
+            if self.current_char == '~':
+                self.advance()
+                return Token(VARIABLERANGE, '~')
+
             self.error()
 
         return Token(EOF, None)
@@ -257,6 +391,13 @@ class MemoryStructure(AST):
     def __init__(self, op, token):
         self.op = op
         self.token = token
+
+
+class MemoryIndex(AST):
+    """e.g. Mat A[1, 1]"""
+    def __init__(self, left, right):
+        self.left = left
+        self.right = right
 
 
 class BinOp(AST):
@@ -299,6 +440,21 @@ class IfThen(AST):
         self.else_clause = []
 
 
+class ForTo(AST):
+    def __init__(self, start, end, step, var):
+        self.start = start
+        self.end = end
+        self.step = step
+        self.var = var
+        self.children = []
+
+
+class WhileLoop(AST):
+    def __init__(self):
+        self.condition = None
+        self.children = []
+
+
 class DoLpWhile(AST):
     def __init__(self):
         self.children = []
@@ -310,7 +466,18 @@ class NullaryBuiltin(AST):
         self.op = op
 
 
+class NullaryFunc(AST):
+    def __init__(self, op):
+        self.op = op
+
+
 class UnaryBuiltin(AST):
+    def __init__(self, op, arg1):
+        self.op = op
+        self.arg1 = arg1
+
+
+class UnaryFunc(AST):
     def __init__(self, op, arg1):
         self.op = op
         self.arg1 = arg1
@@ -331,10 +498,25 @@ class TernaryBuiltin(AST):
         self.arg3 = arg3
 
 
+class QuaternaryBuiltin(AST):
+    def __init__(self, op, arg1, arg2, arg3, arg4):
+        self.op = op
+        self.arg1 = arg1
+        self.arg2 = arg2
+        self.arg3 = arg3
+        self.arg4 = arg4
+
+
 class Assign(AST):
     def __init__(self, left, right):
         self.left = left
         self.right = right
+
+
+class VariableRange(AST):
+    def __init__(self, lower, upper):
+        self.lower = lower
+        self.upper = upper
 
 
 class Initialize(AST):
@@ -366,12 +548,11 @@ class Parser(object):
         else:
             self.error()
 
-    def try_expr(self):
-        # tries to read an expression from the lexer
+    def try_parse(self, parse_func):
         pos = self.lexer.freeze()
         token = self.current_token
         try:
-            self.expr()
+            parse_func()
             return True
         except:
             return False
@@ -400,9 +581,8 @@ class Parser(object):
 
         while self.current_token.type == SEMI:
             self.eat(SEMI)
-            results.append(self.statement())
-
-        print 'returning from statement_list:', results, self.current_token
+            if self.current_token.type != EOF:
+                results.append(self.statement())
 
         return results
 
@@ -421,8 +601,18 @@ class Parser(object):
             self.eat(BREAK)
             node = NullaryBuiltin(token)
 
+        elif token.type == STOP:
+            self.eat(STOP)
+            node = NullaryBuiltin(token)
+
         elif token.type == IF:
             node = self.if_then()
+
+        elif token.type == FOR:
+            node = self.for_to()
+
+        elif token.type == WHILE:
+            node = self.while_loop()
 
         elif token.type == DO:
             node = self.do_loop_while()
@@ -431,37 +621,66 @@ class Parser(object):
             self.eat(PROG)
             node = UnaryBuiltin(token, self.string_literal())
 
+        elif token.type == DSZ:
+            self.eat(DSZ)
+            node = UnaryBuiltin(token, self.factor_ref())
+
+        elif token.type == ISZ:
+            self.eat(ISZ)
+            node = UnaryBuiltin(token, self.factor_ref())
+
+        elif token.type == STOPICT:
+            self.eat(STOPICT)
+            node = UnaryBuiltin(token, self.num_limited(1, 20))
+
         elif token.type == RCLPICT:
             self.eat(RCLPICT)
             node = UnaryBuiltin(token, self.num_limited(1, 20))
 
         elif token.type == TEXT:
             self.eat(TEXT)
-            arg1 = self.num()
+            arg1 = self.expr()
             self.eat(COMMA)
-            arg2 = self.num()
+            arg2 = self.expr()
             self.eat(COMMA)
             arg3 = self.string_literal()
             node = TernaryBuiltin(token, arg1, arg2, arg3)
+
+        elif token.type == FLINE:
+            self.eat(FLINE)
+            arg1 = self.expr()
+            self.eat(COMMA)
+            arg2 = self.expr()
+            self.eat(COMMA)
+            arg3 = self.expr()
+            self.eat(COMMA)
+            arg4 = self.expr()
+            node = QuaternaryBuiltin(token, arg1, arg2, arg3, arg4)
 
         elif token.type == LBRACE:
             node = self.initialize_memory()
 
         else:
-            # read ahead. it might be part of an assignment statement
-            if self.try_expr():
+            # read ahead.
+            if self.try_parse(self.assignment_statement):
                 node = self.assignment_statement()
+
+            elif self.try_parse(self.condition) or self.try_parse(self.expr):
+                node = self.inline_if()
 
             else:
                 node = self.empty()
 
-
-        print 'statement ->', node
         return node
 
     def if_then(self):
         self.eat(IF)
-        root = IfThen(self.condition())
+        condition = None
+        if self.try_parse(self.condition):
+            condition = self.condition()
+        else:
+            condition = self.expr()
+        root = IfThen(condition)
         self.eat(SEMI)
         self.eat(THEN)
         nodes = self.statement_list()
@@ -473,6 +692,51 @@ class Parser(object):
             for node in nodes:
                 root.else_clause.append(node)
         self.eat(IFEND)
+        return root
+
+    def inline_if(self):
+        condition = None
+        if self.try_parse(self.condition):
+            condition = self.condition()
+        else:
+            condition = self.expr()
+        root = IfThen(condition)
+        self.eat(INLINEIF)
+        root.if_clause.append(self.statement())
+        return root
+
+    def for_to(self):
+        self.eat(FOR)
+        start = self.expr()
+        self.eat(ASSIGN)
+        var = self.factor_ref()
+        self.eat(TO)
+        end = self.expr()
+        step = Token(INTEGER, 1)
+        if self.current_token.type == STEP:
+            self.eat(STEP)
+            step = self.expr()
+        self.eat(SEMI)
+        root = ForTo(start, end, step, var)
+        nodes = self.statement_list()
+        for node in nodes:
+            root.children.append(node)
+        self.eat(NEXT)
+        return root
+
+    def while_loop(self):
+        root = WhileLoop()
+        self.eat(WHILE)
+        if self.try_parse(self.condition):
+            root.condition = self.condition()
+        else:
+            root.condition = self.expr()
+        self.eat(SEMI)
+        nodes = self.statement_list()
+        for node in nodes:
+            root.children.append(node)
+        self.eat(WHILEEND)
+        return root
 
     def do_loop_while(self):
         root = DoLpWhile()
@@ -482,7 +746,10 @@ class Parser(object):
         for node in nodes:
             root.children.append(node)
         self.eat(LPWHILE)
-        root.condition = self.condition()
+        if self.try_parse(self.condition):
+            root.condition = self.condition()
+        else:
+            root.condition = self.expr()
         return root
 
     def initialize_memory(self):
@@ -506,6 +773,15 @@ class Parser(object):
         node = MemoryStructure(op, token)
         return node
 
+    def memory_index(self):
+        left = self.memory_structure()
+        self.eat(LBRACKET)
+        x = self.expr()
+        self.eat(COMMA)
+        y = self.expr()
+        self.eat(RBRACKET)
+        node = MemoryIndex(left, (x, y))
+        return node
 
     def num(self):
         node = Num(self.current_token)
@@ -527,7 +803,7 @@ class Parser(object):
     def assignment_statement(self):
         left = self.expr()
         self.eat(ASSIGN)
-        right = self.variable()
+        right = self.assignment_factor_ref()
         node = Assign(left, right)
         return node
 
@@ -573,10 +849,9 @@ class Parser(object):
 
     def bexp(self):
         token = self.current_token
-        print token
         if token.type == NOT:
             self.eat(NOT)
-            node = UnaryOp(token, self.condition())
+            node = UnaryOp(token, self.bexp())
             return node
         elif token.type == LPAREN:
             self.eat(LPAREN)
@@ -586,7 +861,6 @@ class Parser(object):
         
         left = self.expr()
         token = self.current_token
-        print token
 
         if token.type == EQ:
             self.eat(EQ)
@@ -622,8 +896,10 @@ class Parser(object):
         return node
 
     def term(self):
-        """term : factor ((MUL | DIV) factor)*"""
-        node = self.factor()
+        """
+        term : term_func ((MUL | DIV) term_func)*
+        """
+        node = self.term_func()
 
         while self.current_token.type in (MUL, DIV):
             token = self.current_token
@@ -632,7 +908,37 @@ class Parser(object):
             elif token.type == DIV:
                 self.eat(DIV)
 
-            node = BinOp(left=node, op=token, right=self.factor())
+            node = BinOp(left=node, op=token, right=self.term_func())
+
+        return node
+
+    def term_func(self):
+        token = self.current_token
+        if token.type == INTG:
+            self.eat(INTG)
+            node = UnaryFunc(token, self.term_shorthand())
+            return node
+        else:
+            node = self.term_shorthand()
+            return node
+
+    def term_shorthand(self):
+        """
+        term : factor ((expr))*
+             | factor (factor_ref)*
+        """
+        node = self.factor()
+
+        while True:
+            token = self.current_token
+            if token.type in (RANDNUM, GETKEY, LPAREN):
+                token = Token(MUL, '*')
+                node = BinOp(left=node, op=token, right=self.factor())
+            elif self.try_parse(self.factor_ref):
+                token = Token(MUL, '*')
+                node = BinOp(left=node, op=token, right=self.factor_ref())
+            else:
+                break
 
         return node
 
@@ -640,11 +946,10 @@ class Parser(object):
         """factor : PLUS factor
                   | MINUS factor
                   | INTEGER
-                  | LPAREN expr RPAREN
-                  | variable
+                  | ( expr )
+                  | factor_ref
         """
         token = self.current_token
-        print token
         if token.type == PLUS:
             self.eat(PLUS)
             node = UnaryOp(token, self.factor())
@@ -656,14 +961,43 @@ class Parser(object):
         elif token.type == INTEGER:
             self.eat(INTEGER)
             return Num(token)
+        elif token.type == RANDNUM:
+            self.eat(RANDNUM)
+            node = NullaryFunc(token)
+            return node
+        elif token.type == GETKEY:
+            self.eat(GETKEY)
+            node = NullaryFunc(token)
+            return node
         elif token.type == LPAREN:
             self.eat(LPAREN)
             node = self.expr()
             self.eat(RPAREN)
             return node
         else:
+            node = self.factor_ref()
+            return node
+
+    def factor_ref(self):
+        token = self.current_token
+        if token.type == MAT:
+            node = self.memory_index()
+            return node
+        else:
             node = self.variable()
             return node
+
+    def assignment_factor_ref(self):
+        token = self.current_token
+        node = self.factor_ref()
+        if token.type == VARIABLE and self.current_token.type == VARIABLERANGE:
+            self.eat(VARIABLERANGE)
+            token = self.current_token
+            upper = self.factor_ref()
+            if token.type != VARIABLE or ord(node.value) > ord(upper.value):
+                self.error()
+            node = VariableRange(node, upper)
+        return node
 
     def parse(self):
         node = self.program()
