@@ -26,15 +26,23 @@ LT = 'LT'
 GTE = 'GTE'
 LTE = 'LTE'
 DIM = 'DIM'
+LOCATE = 'LOCATE'
+CLRTEXT = 'CLRTEXT'
 CLS = 'CLS'
 STOPICT = 'STOPICT'
 RCLPICT = 'RCLPICT'
 VIEWWINDOW = 'VIEWWINDOW'
 FLINE = 'FLINE'
+HORIZONTAL = 'HORIZONTAL'
+PXLON = 'PXLON'
+PXLOFF = 'PXLOFF'
+PXLCHG = 'PXLCHG'
+PXLTEST = 'PXLTEST'
 INLINEIF = 'INLINEIF'
 ISZ = 'ISZ'
 DSZ = 'DSZ'
 INTG = 'INTG'
+FRAC = 'FRAC'
 RANDNUM = 'RANDNUM'
 GETKEY = 'GETKEY'
 IF = 'IF'
@@ -49,8 +57,11 @@ WHILE = 'WHILE'
 WHILEEND = 'WHILEEND'
 DO = 'DO'
 LPWHILE = 'LPWHILE'
+RETURN = 'RETURN'
 BREAK = 'BREAK'
 STOP = 'STOP'
+LBL = 'LBL'
+GOTO = 'GOTO'
 EOF = 'EOF'
 SEMI = 'SEMI'
 PROG = 'PROG'
@@ -73,17 +84,22 @@ class Token(object):
 
 
 def is_variable(char):
-    return char in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ\xcd\xce'
+    return char in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ\xcd\xce\xd0'
 
+
+def is_numeric(char):
+    return char in '01234567890.'
 
 class Lexer(object):
     def __init__(self, text):
         self.text = text
         self.pos = 0
         self.current_char = self.text[self.pos]
+        if self.current_char == '\x00':
+            self.current_char = None
 
     def error(self):
-        raise Exception('Invalid character')
+        raise Exception('Invalid character: pos=%d chrs=%r' % (self.pos, self.text[self.pos:self.pos+5]))
 
     def advance(self):
         """Advance the `pos` pointer and set the `current_char` variable."""
@@ -92,6 +108,8 @@ class Lexer(object):
             self.current_char = None  # Indicates end of input
         else:
             self.current_char = self.text[self.pos]
+            if self.current_char == '\x00':
+                self.current_char = None
 
     def freeze(self):
         return self.pos
@@ -99,6 +117,8 @@ class Lexer(object):
     def seek(self, pos):
         self.pos = pos
         self.current_char = self.text[self.pos]
+        if self.current_char == '\x00':
+            self.current_char = None
 
     def peek(self):
         peek_pos = self.pos + 1
@@ -107,16 +127,14 @@ class Lexer(object):
         else:
             return self.text[peek_pos]
 
-    def skip_null(self):
-        while self.current_char is not None and self.current_char == '\x00':
-            self.advance()
-
-    def integer(self):
+    def numeric(self):
         """Return a (multidigit) integer consumed from the input."""
         result = ''
-        while self.current_char is not None and self.current_char.isdigit():
+        while self.current_char is not None and is_numeric(self.current_char):
             result += self.current_char
             self.advance()
+        if '.' in result:
+            return float(result)
         return int(result)
 
     def string(self):
@@ -136,6 +154,8 @@ class Lexer(object):
         """
         while self.current_char is not None:
 
+            #print repr(self.current_char)
+
             if self.current_char == '\xd1':
                 self.advance()
                 return Token(CLS, 'Cls')
@@ -152,13 +172,25 @@ class Lexer(object):
                 self.advance()
                 return Token(VIEWWINDOW, 'ViewWindow')
 
+            if self.current_char == '\xec':
+                self.advance()
+                return Token(GOTO, 'Goto ')
+
             if self.current_char == '\xed':
                 self.advance()
                 return Token(PROG, 'Prog')
 
+            if self.current_char == '\xe2':
+                self.advance()
+                return Token(LBL, 'Lbl ')
+
             if self.current_char == '\xde':
                 self.advance()
                 return Token(INTG, 'Intg ')
+
+            if self.current_char == '\xb6':
+                self.advance()
+                return Token(FRAC, 'Frac ')
 
             if self.current_char == '\xc1':
                 self.advance()
@@ -249,6 +281,11 @@ class Lexer(object):
                 self.advance()
                 return Token(LPWHILE, 'LpWhile ')
 
+            if self.current_char == '\xf7' and self.peek() == '\x0c':
+                self.advance()
+                self.advance()
+                return Token(RETURN, 'Return')
+
             if self.current_char == '\xf7' and self.peek() == '\x0d':
                 self.advance()
                 self.advance()
@@ -258,6 +295,16 @@ class Lexer(object):
                 self.advance()
                 self.advance()
                 return Token(STOP, 'Stop')
+
+            if self.current_char == '\xf7' and self.peek() == '\x10':
+                self.advance()
+                self.advance()
+                return Token(LOCATE, 'Locate ')
+
+            if self.current_char == '\xf7' and self.peek() == '\x18':
+                self.advance()
+                self.advance()
+                return Token(CLRTEXT, 'ClrText')
 
             if self.current_char == '\xf7' and self.peek() == '\x93':
                 self.advance()
@@ -269,19 +316,40 @@ class Lexer(object):
                 self.advance()
                 return Token(RCLPICT, 'RclPict ')
 
+            if self.current_char == '\xf7' and self.peek() == '\xa4':
+                self.advance()
+                self.advance()
+                return Token(HORIZONTAL, 'Horizontal ')
+
             if self.current_char == '\xf7' and self.peek() == '\xa5':
                 self.advance()
                 self.advance()
-                return Token(TEXT, 'Text')
+                return Token(TEXT, 'Text ')
 
             if self.current_char == '\xf7' and self.peek() == '\xa7':
                 self.advance()
                 self.advance()
-                return Token(FLINE, 'F-Line')
+                return Token(FLINE, 'F-Line ')
 
-            if self.current_char == '\x00':
-                self.skip_null()
-                continue
+            if self.current_char == '\xf7' and self.peek() == '\xab':
+                self.advance()
+                self.advance()
+                return Token(PXLON, 'PxlOn ')
+
+            if self.current_char == '\xf7' and self.peek() == '\xac':
+                self.advance()
+                self.advance()
+                return Token(PXLOFF, 'PxlOff ')
+
+            if self.current_char == '\xf7' and self.peek() == '\xad':
+                self.advance()
+                self.advance()
+                return Token(PXLCHG, 'PxlChg ')
+
+            if self.current_char == '\xf7' and self.peek() == '\xaf':
+                self.advance()
+                self.advance()
+                return Token(PXLTEST, 'PxlTest(')
 
             if self.current_char == ',':
                 self.advance()
@@ -328,8 +396,8 @@ class Lexer(object):
                 self.advance()
                 return token
 
-            if self.current_char.isdigit():
-                return Token(INTEGER, self.integer())
+            if is_numeric(self.current_char):
+                return Token(INTEGER, self.numeric())
 
             if self.current_char == '"':
                 return Token(STRING, self.string())
@@ -338,13 +406,13 @@ class Lexer(object):
                 self.advance()
                 return Token(PLUS, '+')
 
-            if self.current_char == '\x99':
+            if self.current_char in ('\x99', '\x87'):
                 self.advance()
                 return Token(MINUS, '-')
 
-            if self.current_char == '*':
+            if self.current_char == '\xa9':
                 self.advance()
-                return Token(MUL, '*')
+                return Token(MUL, 'x')
 
             if self.current_char == '\xb9':
                 self.advance()
@@ -490,6 +558,13 @@ class BinaryBuiltin(AST):
         self.arg2 = arg2
 
 
+class BinaryFunc(AST):
+    def __init__(self, op, arg1, arg2):
+        self.op = op
+        self.arg1 = arg1
+        self.arg2 = arg2
+
+
 class TernaryBuiltin(AST):
     def __init__(self, op, arg1, arg2, arg3):
         self.op = op
@@ -505,6 +580,17 @@ class QuaternaryBuiltin(AST):
         self.arg2 = arg2
         self.arg3 = arg3
         self.arg4 = arg4
+
+
+class SenaryBuiltin(AST):
+    def __init__(self, op, arg1, arg2, arg3, arg4, arg5, arg6):
+        self.op = op
+        self.arg1 = arg1
+        self.arg2 = arg2
+        self.arg3 = arg3
+        self.arg4 = arg4
+        self.arg5 = arg5
+        self.arg6 = arg6
 
 
 class Assign(AST):
@@ -525,6 +611,16 @@ class Initialize(AST):
         self.right = right
 
 
+class Label(AST):
+    def __init__(self, op):
+        self.op = op
+
+
+class Goto(AST):
+    def __init__(self, op):
+        self.op = op
+
+
 class NoOp(AST):
     pass
 
@@ -536,7 +632,7 @@ class Parser(object):
         self.current_token = self.lexer.get_next_token()
 
     def error(self):
-        raise Exception('Invalid syntax')
+        raise Exception('Invalid syntax: tok=%r pos=%d chr=%r' % (self.current_token, self.lexer.pos, self.lexer.current_char))
 
     def eat(self, token_type):
         # compare the current token type with the passed token
@@ -597,6 +693,18 @@ class Parser(object):
             self.eat(CLS)
             node = NullaryBuiltin(token)
 
+        elif token.type == CLRTEXT:
+            self.eat(CLRTEXT)
+            node = NullaryBuiltin(token)
+
+        elif token.type == STRING:
+            self.eat(STRING)
+            node = NullaryBuiltin(token)
+
+        elif token.type == RETURN:
+            self.eat(RETURN)
+            node = NullaryBuiltin(token)
+
         elif token.type == BREAK:
             self.eat(BREAK)
             node = NullaryBuiltin(token)
@@ -604,6 +712,14 @@ class Parser(object):
         elif token.type == STOP:
             self.eat(STOP)
             node = NullaryBuiltin(token)
+
+        elif token.type == LBL:
+            self.eat(LBL)
+            node = Label(self.num())
+
+        elif token.type == GOTO:
+            self.eat(GOTO)
+            node = Goto(self.num())
 
         elif token.type == IF:
             node = self.if_then()
@@ -643,7 +759,24 @@ class Parser(object):
             self.eat(COMMA)
             arg2 = self.expr()
             self.eat(COMMA)
-            arg3 = self.string_literal()
+            arg3 = None
+            if self.current_token.type == STRING:
+                arg3 = self.string_literal()
+            else:
+                arg3 = self.expr()
+            node = TernaryBuiltin(token, arg1, arg2, arg3)
+
+        elif token.type == LOCATE:
+            self.eat(LOCATE)
+            arg1 = self.expr()
+            self.eat(COMMA)
+            arg2 = self.expr()
+            self.eat(COMMA)
+            arg3 = None
+            if self.current_token.type == STRING:
+                arg3 = self.string_literal()
+            else:
+                arg3 = self.expr()
             node = TernaryBuiltin(token, arg1, arg2, arg3)
 
         elif token.type == FLINE:
@@ -656,6 +789,46 @@ class Parser(object):
             self.eat(COMMA)
             arg4 = self.expr()
             node = QuaternaryBuiltin(token, arg1, arg2, arg3, arg4)
+
+        elif token.type == HORIZONTAL:
+            self.eat(HORIZONTAL)
+            node = UnaryBuiltin(token, self.expr())
+
+        elif token.type == PXLON:
+            self.eat(PXLON)
+            arg1 = self.expr()
+            self.eat(COMMA)
+            arg2 = self.expr()
+            node = BinaryBuiltin(token, arg1, arg2)
+
+        elif token.type == PXLOFF:
+            self.eat(PXLOFF)
+            arg1 = self.expr()
+            self.eat(COMMA)
+            arg2 = self.expr()
+            node = BinaryBuiltin(token, arg1, arg2)
+
+        elif token.type == PXLCHG:
+            self.eat(PXLCHG)
+            arg1 = self.expr()
+            self.eat(COMMA)
+            arg2 = self.expr()
+            node = BinaryBuiltin(token, arg1, arg2)
+
+        elif token.type == VIEWWINDOW:
+            self.eat(VIEWWINDOW)
+            arg1 = self.expr()
+            self.eat(COMMA)
+            arg2 = self.expr()
+            self.eat(COMMA)
+            arg3 = self.expr()
+            self.eat(COMMA)
+            arg4 = self.expr()
+            self.eat(COMMA)
+            arg5 = self.expr()
+            self.eat(COMMA)
+            arg6 = self.expr()
+            node = SenaryBuiltin(token, arg1, arg2, arg3, arg4, arg5, arg6)
 
         elif token.type == LBRACE:
             node = self.initialize_memory()
@@ -671,6 +844,7 @@ class Parser(object):
             else:
                 node = self.empty()
 
+        #print 'statement ->', node
         return node
 
     def if_then(self):
@@ -897,9 +1071,9 @@ class Parser(object):
 
     def term(self):
         """
-        term : term_func ((MUL | DIV) term_func)*
+        term : term_shorthand ((MUL | DIV) term_shorthand)*
         """
-        node = self.term_func()
+        node = self.term_shorthand()
 
         while self.current_token.type in (MUL, DIV):
             token = self.current_token
@@ -908,19 +1082,9 @@ class Parser(object):
             elif token.type == DIV:
                 self.eat(DIV)
 
-            node = BinOp(left=node, op=token, right=self.term_func())
+            node = BinOp(left=node, op=token, right=self.term_shorthand())
 
         return node
-
-    def term_func(self):
-        token = self.current_token
-        if token.type == INTG:
-            self.eat(INTG)
-            node = UnaryFunc(token, self.term_shorthand())
-            return node
-        else:
-            node = self.term_shorthand()
-            return node
 
     def term_shorthand(self):
         """
@@ -931,7 +1095,7 @@ class Parser(object):
 
         while True:
             token = self.current_token
-            if token.type in (RANDNUM, GETKEY, LPAREN):
+            if token.type in (RANDNUM, GETKEY, PXLTEST, INTG, FRAC, LPAREN):
                 token = Token(MUL, '*')
                 node = BinOp(left=node, op=token, right=self.factor())
             elif self.try_parse(self.factor_ref):
@@ -968,6 +1132,22 @@ class Parser(object):
         elif token.type == GETKEY:
             self.eat(GETKEY)
             node = NullaryFunc(token)
+            return node
+        elif token.type == PXLTEST:
+            self.eat(PXLTEST)
+            arg1 = self.expr()
+            self.eat(COMMA)
+            arg2 = self.expr()
+            self.eat(RPAREN)
+            node = BinaryFunc(token, arg1, arg2)
+            return node
+        elif token.type == INTG:
+            self.eat(INTG)
+            node = UnaryFunc(token, self.term_shorthand())
+            return node
+        elif token.type == FRAC:
+            self.eat(FRAC)
+            node = UnaryFunc(token, self.term_shorthand())
             return node
         elif token.type == LPAREN:
             self.eat(LPAREN)
