@@ -11,7 +11,7 @@ class CasioProgram(object):
         self.parser = Parser(self.lexer)
 
     def parse(self):
-        tree = self.parser.parse()
+        self.tree = self.parser.parse()
 
 
 class G1mFile(object):
