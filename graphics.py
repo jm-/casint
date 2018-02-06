@@ -1,6 +1,9 @@
 import ctypes
 import sdl2
 
+def setpixel(renderer, x, y):
+	sdl2.SDL_RenderDrawPoint(renderer, x, y)
+
 def fline(renderer, x0, y0, x1, y1):
     """
     Modified Bresenham's line algorithm
