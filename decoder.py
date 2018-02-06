@@ -5,18 +5,27 @@ import bitstring
 from interpreter import *
 
 class CasioProgram(object):
-    def __init__(self, text):
+    def __init__(self, name, text):
+        self.name = name.rstrip('\x00')
+        self.size = len(text)
         # first 10 bytes are reserved
-        self.lexer = Lexer(text[10:])
-        self.parser = Parser(self.lexer)
+        lexer = Lexer(text[10:])
+        self.parser = Parser(lexer)
 
     def parse(self):
         self.tree = self.parser.parse()
 
+    def __str__(self):
+        return '%-8s %5d' % (self.name, self.size)
+
+    def __repr__(self):
+        return self.__str__()
+
 
 class G1mFile(object):
-    def __init__(self, filepath):
+    def __init__(self, filepath, debug=False):
         self.filepath = filepath
+        self.debug = debug
 
     def _read_header(self, fp):
         headerBytes = fp.read(32)
@@ -36,10 +45,11 @@ class G1mFile(object):
             numItems
         ) = struct.unpack('>8sB5sB1sIB9sH', headerIbytes)
 
-        print 'fileIdentifier', fileIdentifier
-        print 'fileTypeIdentifier', fileTypeIdentifier
-        print 'totalFileSize', totalFileSize
-        print 'numItems', numItems
+        if self.debug:
+            print 'fileIdentifier', fileIdentifier
+            print 'fileTypeIdentifier', fileTypeIdentifier
+            print 'totalFileSize', totalFileSize
+            print 'numItems', numItems
 
         # validate the control bytes
         lsb = totalFileSize % 256
@@ -60,9 +70,10 @@ class G1mFile(object):
             itemHeaderTypeIdentifier
         ) = struct.unpack('>16s3sB', itemHeader1)
 
-        print 'itemIdentifier', itemIdentifier
-        print 'reservedSequence1', reservedSequence1
-        print 'itemHeaderTypeIdentifier', itemHeaderTypeIdentifier
+        if self.debug:
+            print 'itemIdentifier', itemIdentifier
+            print 'reservedSequence1', reservedSequence1
+            print 'itemHeaderTypeIdentifier', itemHeaderTypeIdentifier
 
         # make sure we're dealing with a known item type,
         # so that itemHeader2 can be safely decoded
@@ -77,11 +88,12 @@ class G1mFile(object):
             reservedSequence2
         ) = struct.unpack('>8s8sBI3s', itemHeader2)
 
-        print 'memLocationName', memLocationName
-        print 'itemTitle', itemTitle
-        print 'itemTypeIdentifier', itemTypeIdentifier
-        print 'itemLength', itemLength
-        print 'reservedSequence2', reservedSequence2
+        if self.debug:
+            print 'memLocationName', memLocationName
+            print 'itemTitle', itemTitle
+            print 'itemTypeIdentifier', itemTypeIdentifier
+            print 'itemLength', itemLength
+            print 'reservedSequence2', reservedSequence2
 
         # read the rest of the item
         itemData = fp.read(itemLength)
@@ -89,30 +101,18 @@ class G1mFile(object):
         # make sure the item is a program
         assert itemTypeIdentifier == 0x01
 
-        program = CasioProgram(itemData)
+        program = CasioProgram(itemTitle, itemData)
         program.parse()
+        return program
 
     def load(self):
         with open(self.filepath, 'rb') as fp:
             numItems = self._read_header(fp)
+            programs = [None] * numItems
             i = 0
             while i < numItems:
-                print '---------- reading item %d' % (i,)
-                self._read_item(fp)
+                if self.debug:
+                    print '---------- reading item %d' % (i,)
+                programs[i] = self._read_item(fp)
                 i += 1
-
-def main(filepath):
-    g1mfile = G1mFile(filepath)
-    g1mfile.load()
-
-    # debugging
-    return g1mfile
-
-if __name__ == '__main__':
-    from sys import argv as args
-
-    if len(args) == 2:
-        # debugging: remove assignment
-        g = main(args[1])
-    else:
-        print 'Usage: %s <file.g1m>' % (args[0],)
+            return programs
