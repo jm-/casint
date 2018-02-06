@@ -818,7 +818,7 @@ class Parser(object):
         var = self.factor_ref()
         self.eat(TO)
         end = self.expr()
-        step = Token(INTEGER, 1)
+        step = Num(Token(INTEGER, 1))
         if self.current_token.type == STEP:
             self.eat(STEP)
             step = self.expr()

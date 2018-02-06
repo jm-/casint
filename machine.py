@@ -3,17 +3,18 @@ import ctypes
 import sdl2
 
 from common import *
-from graphics import fline
+from interpreter import Var, MemoryIndex
+from graphics import setpixel, fline
 
 class NodeVisitor(object):
-    def visit(self, node):
-        method_name = 'visit_' + type(node).__name__
+    def _visit(self, node):
+        method_name = '_visit_' + type(node).__name__
         print 'DBG: invoking %s' % (method_name,)
-        visitor = getattr(self, method_name, self.generic_visit)
+        visitor = getattr(self, method_name, self._generic_visit)
         return visitor(node)
 
-    def generic_visit(self, node):
-        raise Exception('No visit_{} method'.format(type(node).__name__))
+    def _generic_visit(self, node):
+        raise Exception('No _visit_{} method'.format(type(node).__name__))
 
 
 class CasioInterpreter(NodeVisitor):
@@ -97,7 +98,7 @@ class CasioInterpreter(NodeVisitor):
 
     def run(self, name):
         program = self.programs.get(name)
-        self.visit(program.tree)
+        self._visit(program.tree)
 
     def idle(self):
         event = sdl2.SDL_Event()
@@ -107,37 +108,63 @@ class CasioInterpreter(NodeVisitor):
                     self.running = False
                     break
 
-            self._render_begin()
-            self._render_end()
-
             sdl2.SDL_Delay(50)
 
     # =========================================================================
     # Node processing starts here!
     # =========================================================================
 
-    def visit_Program(self, node):
-        for statement in node.children:
-            self.visit(statement)
+    def _assign(self, value, node):
+        if type(node) is Var:
+            self.vars[node.value] = value
 
-    def visit_SenaryBuiltin(self, node):
+        elif type(node) is MemoryIndex:
+            if node.left.op.type == MAT:
+                raise Exception('matrix assignment is unimplemented')
+            else:
+                raise Exception('Unknown memory index assignment: {}'.format(node.left.op.type))
+
+        else:
+            raise Exception('Unknown variable assignment node: {}'.format(type(node).__name__))
+
+    def _retrieve(self, node):
+        if type(node) is Var:
+            return self.vars[node.value]
+
+        elif type(node) is MemoryIndex:
+            if node.left.op.type == MAT:
+                raise Exception('matrix retrieval is unimplemented')
+            else:
+                raise Exception('Unknown memory index retrieval: {}'.format(node.left.op.type))
+
+        else:
+            raise Exception('Unknown variable retrieval node: {}'.format(type(node).__name__))
+
+    def _visit_NoOp(self, node):
+        pass
+
+    def _visit_Program(self, node):
+        for statement in node.children:
+            self._visit(statement)
+
+    def _visit_SenaryBuiltin(self, node):
         if node.op.type == VIEWWINDOW:
             # check that it matches our implementation
-            assert self.visit(node.arg1) == 1
-            assert self.visit(node.arg2) == 127
-            assert self.visit(node.arg3) == 0
-            assert self.visit(node.arg4) == 63
-            assert self.visit(node.arg5) == 1
-            assert self.visit(node.arg6) == 0
+            assert self._visit(node.arg1) == 1
+            assert self._visit(node.arg2) == 127
+            assert self._visit(node.arg3) == 0
+            assert self._visit(node.arg4) == 63
+            assert self._visit(node.arg5) == 1
+            assert self._visit(node.arg6) == 0
         else:
             raise Exception('Unknown SenaryBuiltin op type: {}'.format(node.op.type))
 
-    def visit_QuaternaryBuiltin(self, node):
+    def _visit_QuaternaryBuiltin(self, node):
         if node.op.type == FLINE:
-            x0 = self.visit(node.arg1)
-            y0 = self.visit(node.arg2)
-            x1 = self.visit(node.arg3)
-            y1 = self.visit(node.arg4)
+            x0 = self._visit(node.arg1)
+            y0 = self._visit(node.arg2)
+            x1 = self._visit(node.arg3)
+            y1 = self._visit(node.arg4)
             self._render_begin()
             self._set_color(True)
             fline(self.renderer, x0, y0, x1, y1)
@@ -145,5 +172,80 @@ class CasioInterpreter(NodeVisitor):
         else:
             raise Exception('Unknown QuaternaryBuiltin op type: {}'.format(node.op.type))
 
-    def visit_Num(self, node):
+    def _visit_TernaryBuiltin(self, node):
+        if node.op.type == TEXT:
+            x = self._visit(node.arg1)
+            y = self._visit(node.arg2)
+            s = self._visit(node.arg3)
+            self._render_begin()
+            self._set_color(True)
+            # todo
+            self._render_end()
+        else:
+            raise Exception('Unknown QuaternaryBuiltin op type: {}'.format(node.op.type))
+
+    def _visit_BinaryBuiltin(self, node):
+        if node.op.type == PXLON:
+            y = self._visit(node.arg1)
+            x = self._visit(node.arg2)
+            self._render_begin()
+            self._set_color(True)
+            setpixel(self.renderer, x, y)
+            self._render_end()
+        elif node.op.type == PXLOFF:
+            y = self._visit(node.arg1)
+            x = self._visit(node.arg2)
+            self._render_begin()
+            self._set_color(False)
+            setpixel(self.renderer, x, y)
+            self._render_end()
+        else:
+            raise Exception('Unknown BinaryBuiltin op type: {}'.format(node.op.type))
+
+    def _visit_UnaryBuiltin(self, node):
+        if node.op.type == HORIZONTAL:
+            y = self._visit(node.arg1)
+            self._render_begin()
+            self._set_color(True)
+            fline(self.renderer, 1, y, 127, y)
+            self._render_end()
+        else:
+            raise Exception('Unknown UnaryBuiltin op type: {}'.format(node.op.type))
+
+    def _visit_Num(self, node):
         return node.value
+
+    def _visit_Var(self, node):
+        return self._retrieve(node)
+
+    def _visit_StringLit(self, node):
+        return node.value
+
+    def _visit_BinOp(self, node):
+        if node.op.type == PLUS:
+            return self._visit(node.left) + self._visit(node.right)
+        elif node.op.type == MINUS:
+            return self._visit(node.left) - self._visit(node.right)
+        elif node.op.type == MUL:
+            return self._visit(node.left) * self._visit(node.right)
+        elif node.op.type == DIV:
+            return self._visit(node.left) / self._visit(node.right)
+        else:
+            raise Exception('Unknown Bin op type: {}'.format(node.op.type))
+
+    def _visit_ForTo(self, node):
+        currentvalue = self._visit(node.start)
+        stepvalue = self._visit(node.step)
+        endvalue = self._visit(node.end)
+
+        self._assign(currentvalue, node.var)
+
+        triggered = False
+        while not triggered:
+            triggered = endvalue == self._retrieve(node.var)
+
+            for statement in node.children:
+                self._visit(statement) 
+
+            self._assign(self._retrieve(node.var) + stepvalue, node.var)
+
