@@ -41,3 +41,8 @@ def fline(renderer, x0, y0, x1, y1):
     c += 1
     ptr = ctypes.cast(points, ctypes.POINTER(sdl2.SDL_Point))
     sdl2.SDL_RenderDrawPoints(renderer, ptr, c)
+
+def text(renderer, font, x, y, message):
+    src = sdl2.SDL_Rect(0, 0, 6, 6)
+    dst = sdl2.SDL_Rect(x, y, src.w, src.h)
+    sdl2.SDL_RenderCopy(renderer, font, src, dst)
