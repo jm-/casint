@@ -1,3 +1,14 @@
+import os
+import sys
+
+try:
+    import sdl2
+except ImportError:
+    import platform
+    arch, osname = platform.architecture()
+    if osname == 'WindowsPE':
+        os.environ['PYSDL2_DLL_PATH'] = 'lib/32' if arch == '32bit' else 'lib/64'
+
 from decoder import G1mFile, CasioProgram
 from machine import CasioInterpreter
 
@@ -8,7 +19,7 @@ def main(filepath):
     programs = g1mfile.load()
 
     num_programs = len(programs)
-    print 'Done, found %d programs:' % (num_programs,)
+    print 'Done, loaded %d programs:' % (num_programs,)
     for i in range(num_programs):
         print '%2d: %s' % (i, programs[i])
 
@@ -37,11 +48,10 @@ def main(filepath):
     return 0
 
 if __name__ == '__main__':
-    from sys import exit, argv as args
 
-    if len(args) == 2:
+    if len(sys.argv) == 2:
         # debugging: remove assignment
-        exit(main(args[1]))
+        sys.exit(main(sys.argv[1]))
     else:
-        print 'Usage: %s <file.g1m>' % (args[0],)
-        exit(1)
+        print 'Usage: %s <file.g1m>' % (sys.argv[0],)
+        sys.exit(1)

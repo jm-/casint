@@ -4,7 +4,9 @@ import sdl2
 
 from common import *
 from interpreter import Var, MemoryIndex
-from graphics import setpixel, fline
+from graphics import setpixel, fline, text
+
+SDL_DELAY_MILLIS = 25
 
 class NodeVisitor(object):
     def _visit(self, node):
@@ -46,7 +48,7 @@ class CasioInterpreter(NodeVisitor):
         sdl2.SDL_Init(sdl2.SDL_INIT_VIDEO)
 
         self.window = sdl2.SDL_CreateWindow(
-            "CASINT - CASIO Basic Interpreter - JGames 2018",
+            'CASINT: CASIO Basic Interpreter',
             sdl2.SDL_WINDOWPOS_CENTERED, sdl2.SDL_WINDOWPOS_CENTERED,
             512, 256, sdl2.SDL_WINDOW_SHOWN)
 
@@ -69,6 +71,15 @@ class CasioInterpreter(NodeVisitor):
         # reset render target
         sdl2.SDL_SetRenderTarget(self.renderer, None)
 
+        self.texture_font = self._load_texture('img/font.bmp')
+
+    def _load_texture(self, filename):
+        surface = sdl2.SDL_LoadBMP(filename)
+        texture = sdl2.SDL_CreateTextureFromSurface(self.renderer, surface)
+        # free the surface
+        sdl2.SDL_FreeSurface(surface)
+        return texture
+
     def _render_begin(self):
         sdl2.SDL_SetRenderTarget(self.renderer, self.texture)
 
@@ -81,11 +92,23 @@ class CasioInterpreter(NodeVisitor):
         if is_on:
             sdl2.SDL_SetRenderDrawColor(self.renderer, 0x10, 0x10, 0x10, sdl2.SDL_ALPHA_OPAQUE)
         else:
-            sdl2.SDL_SetRenderDrawColor(self.renderer, 0xf7, 0xe0, 0xbc, sdl2.SDL_ALPHA_OPAQUE)
+            sdl2.SDL_SetRenderDrawColor(self.renderer, 0xe8, 0xe8, 0xee, sdl2.SDL_ALPHA_OPAQUE)
 
     def _refresh_screen(self):
         sdl2.SDL_RenderCopy(self.renderer, self.texture, None, None)
         sdl2.SDL_RenderPresent(self.renderer)
+
+    def _set_window_title(self, name):
+        sdl2.SDL_SetWindowTitle(self.window, name + ' - CASINT: CASIO Basic Interpreter')
+
+    def _handle_events(self):
+        event = sdl2.SDL_Event()
+        while sdl2.SDL_PollEvent(ctypes.byref(event)) != 0:
+            if event.type == sdl2.SDL_QUIT:
+                self.running = False
+                break
+
+        sdl2.SDL_Delay(SDL_DELAY_MILLIS)
 
     def __enter__(self):
         return self
@@ -98,17 +121,12 @@ class CasioInterpreter(NodeVisitor):
 
     def run(self, name):
         program = self.programs.get(name)
+        self._set_window_title(name)
         self._visit(program.tree)
 
     def idle(self):
-        event = sdl2.SDL_Event()
         while self.running:
-            while sdl2.SDL_PollEvent(ctypes.byref(event)) != 0:
-                if event.type == sdl2.SDL_QUIT:
-                    self.running = False
-                    break
-
-            sdl2.SDL_Delay(50)
+            self._handle_events()
 
     # =========================================================================
     # Node processing starts here!
@@ -169,18 +187,20 @@ class CasioInterpreter(NodeVisitor):
             self._set_color(True)
             fline(self.renderer, x0, y0, x1, y1)
             self._render_end()
+            self._handle_events()
         else:
             raise Exception('Unknown QuaternaryBuiltin op type: {}'.format(node.op.type))
 
     def _visit_TernaryBuiltin(self, node):
         if node.op.type == TEXT:
-            x = self._visit(node.arg1)
-            y = self._visit(node.arg2)
+            y = self._visit(node.arg1)
+            x = self._visit(node.arg2)
             s = self._visit(node.arg3)
             self._render_begin()
             self._set_color(True)
-            # todo
+            text(self.renderer, self.texture_font, x, y, s)
             self._render_end()
+            self._handle_events()
         else:
             raise Exception('Unknown QuaternaryBuiltin op type: {}'.format(node.op.type))
 
@@ -192,6 +212,7 @@ class CasioInterpreter(NodeVisitor):
             self._set_color(True)
             setpixel(self.renderer, x, y)
             self._render_end()
+            self._handle_events()
         elif node.op.type == PXLOFF:
             y = self._visit(node.arg1)
             x = self._visit(node.arg2)
@@ -199,6 +220,7 @@ class CasioInterpreter(NodeVisitor):
             self._set_color(False)
             setpixel(self.renderer, x, y)
             self._render_end()
+            self._handle_events()
         else:
             raise Exception('Unknown BinaryBuiltin op type: {}'.format(node.op.type))
 
@@ -245,7 +267,7 @@ class CasioInterpreter(NodeVisitor):
             triggered = endvalue == self._retrieve(node.var)
 
             for statement in node.children:
-                self._visit(statement) 
+                self._visit(statement)
 
             self._assign(self._retrieve(node.var) + stepvalue, node.var)
 
