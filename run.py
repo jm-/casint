@@ -17,24 +17,25 @@ def main(filepath):
 
     print 'Processing G1M file...'
     programs = g1mfile.load()
-
     num_programs = len(programs)
-    print 'Done, loaded %d programs:' % (num_programs,)
-    for i in range(num_programs):
-        print '%2d: %s' % (i, programs[i])
-
-    selection = -1
-    while not (0 <= selection < num_programs):
-        try:
-            selection = input('choose: ')
-        except KeyboardInterrupt:
-            return 0
-        except:
-            selection = -1
 
     with CasioInterpreter(programs) as interpreter:
         try:
-            interpreter.run(programs[selection].name)
+            while True:
+                # TODO: replace with choose_program method
+                for i in range(num_programs):
+                    print '%2d: %s' % (i, programs[i])
+
+                selection = -1
+                while not (0 <= selection < num_programs):
+                    try:
+                        selection = input('choose: ')
+                    except KeyboardInterrupt:
+                        return 0
+                    except:
+                        selection = -1
+
+                interpreter.run(programs[selection].name)
         except:
             import sys, traceback
             e = sys.exc_info()

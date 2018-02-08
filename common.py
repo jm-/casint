@@ -1,3 +1,5 @@
+import sdl2
+
 # define token types
 VARIABLE = 'VARIABLE'
 ASSIGN = 'ASSIGN'
@@ -68,3 +70,13 @@ PROG = 'PROG'
 TEXT = 'TEXT'
 
 ALPHA_MEM_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ\xcd\xce\xd0'
+
+SDL_CASIO_KEYMAP = {
+	sdl2.SDLK_UP		: 28,
+	sdl2.SDLK_RIGHT		: 27,
+	sdl2.SDLK_DOWN		: 37,
+	sdl2.SDLK_LEFT		: 38,
+	sdl2.SDLK_RETURN	: 31
+}
+
+DEFAULT_CASIO_GETKEY = 0
