@@ -197,12 +197,11 @@ class CasioInterpreter(NodeVisitor):
             x = self._visit(node.arg2)
             s = self._visit(node.arg3)
             self._render_begin()
-            self._set_color(True)
             text(self.renderer, self.texture_font, x, y, s)
             self._render_end()
             self._handle_events()
         else:
-            raise Exception('Unknown QuaternaryBuiltin op type: {}'.format(node.op.type))
+            raise Exception('Unknown TernaryBuiltin op type: {}'.format(node.op.type))
 
     def _visit_BinaryBuiltin(self, node):
         if node.op.type == PXLON:
