@@ -71,7 +71,7 @@ class CasioInterpreter(NodeVisitor):
         # reset render target
         sdl2.SDL_SetRenderTarget(self.renderer, None)
 
-        self.texture_font = self._load_texture('img/font.bmp')
+        self.texture_font = self._load_texture('img/text.bmp')
 
     def _load_texture(self, filename):
         surface = sdl2.SDL_LoadBMP(filename)
