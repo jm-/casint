@@ -390,7 +390,7 @@ class AST(object):
 class MemoryStructure(AST):
     def __init__(self, op, token):
         self.op = op
-        self.token = token
+        self.value = token.value
 
 
 class MemoryIndex(AST):
