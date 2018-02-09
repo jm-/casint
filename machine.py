@@ -379,7 +379,7 @@ class CasioInterpreter(NodeVisitor):
         x = self._visit(node.left[0])
         y = self._visit(node.left[1])
         if node.right.op.type == MAT:
-            self.mats[node.right.value] = ([[0] * y] * x)
+            self.mats[node.right.value] = [[0 for j in xrange(y)] for i in xrange(x)]
         else:
             raise Exception('Unknown memory index initialization: {}'.format(node.right.op.type))
 
