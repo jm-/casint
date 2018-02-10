@@ -4,7 +4,7 @@ from random import random as rand_num
 import sdl2
 
 from common import *
-from interpreter import Var, VariableRange, MemoryIndex
+from interpreter import Var, VariableRange, MemoryIndex, Label
 from graphics import setpixel, pxltest, fline, text
 
 SDL_DELAY_MILLIS = 25
@@ -16,6 +16,16 @@ class SubroutineReturnException(Exception):
 
 class ControlLoopBreakException(Exception):
     pass
+
+
+class ProgramStopException(Exception):
+    pass
+
+
+class GotoException(Exception):
+    def __init__(self, node):
+        super(GotoException, self).__init__()
+        self.node = node
 
 
 class NodeVisitor(object):
@@ -143,7 +153,10 @@ class CasioInterpreter(NodeVisitor):
         self.running = True
         program = self.programs.get(name)
         self._set_window_title(name)
-        self._visit(program.tree)
+        try:
+            self._visit(program.tree)
+        except ProgramStopException:
+            pass
 
     def idle(self):
         while self.running:
@@ -155,12 +168,12 @@ class CasioInterpreter(NodeVisitor):
 
     def _run_prog(self, name):
         program = self.programs.get(name)
+        print 'DBG: entering subroutine: %r' % (name,)
         try:
-            print 'entering subroutine: %s' % (name,)
             self._visit(program.tree)
         except SubroutineReturnException:
-            print 'returned from subroutine: %s' % (name,)
             pass
+        print 'DBG: returned from subroutine: %r' % (name,)
 
     def _save_pic(self, num):
         pic = sdl2.SDL_CreateTexture(
@@ -218,10 +231,10 @@ class CasioInterpreter(NodeVisitor):
             raise Exception('Unknown variable retrieval node: {}'.format(type(node).__name__))
 
     def _eval_bool(self, node):
-        print 'bools', type(node)
+        #print 'bools', type(node)
         value = self._visit(node)
 
-        print 'boolean evaling:', repr(value)
+        #print 'boolean evaling:', repr(value)
 
         return bool(value)
 
@@ -229,12 +242,31 @@ class CasioInterpreter(NodeVisitor):
         self._handle_events(delay=True)
         return SDL_CASIO_KEYMAP.get(self.key, DEFAULT_CASIO_GETKEY)
 
+    def _run_statements(self, statements):
+        goto = None
+        while True:
+            try:
+                for statement in statements:
+                    if goto:
+                        if type(statement) is Label and goto.op.value == statement.op.value:
+                            goto = None
+                        else:
+                            continue
+                    self._visit(statement)
+                break
+            except GotoException as e:
+                goto = e.node
+        if goto:
+            # didn't find it, pass it on
+            raise GotoException(goto)
+
     def _visit_NoOp(self, node):
         pass
 
     def _visit_Program(self, node):
-        for statement in node.children:
-            self._visit(statement)
+        #for statement in node.children:
+        #    self._visit(statement)
+        self._run_statements(node.children)
 
     def _visit_SenaryBuiltin(self, node):
         if node.op.type == VIEWWINDOW:
@@ -258,7 +290,7 @@ class CasioInterpreter(NodeVisitor):
             self._set_color(True)
             fline(self.renderer, x0, y0, x1, y1)
             self._render_end()
-            self._handle_events()
+            self._handle_events(delay=True)
         else:
             raise Exception('Unknown QuaternaryBuiltin op type: {}'.format(node.op.type))
 
@@ -270,9 +302,10 @@ class CasioInterpreter(NodeVisitor):
             if type(s) is not str:
                 s = str(s)
             self._render_begin()
+            print 'text:', repr(s)
             text(self.renderer, self.texture_font, x, y, s)
             self._render_end()
-            self._handle_events()
+            self._handle_events(delay=True)
         else:
             raise Exception('Unknown TernaryBuiltin op type: {}'.format(node.op.type))
 
@@ -284,7 +317,7 @@ class CasioInterpreter(NodeVisitor):
             self._set_color(True)
             setpixel(self.renderer, x, y)
             self._render_end()
-            self._handle_events()
+            self._handle_events(delay=True)
         elif node.op.type == PXLOFF:
             y = self._visit(node.arg1)
             x = self._visit(node.arg2)
@@ -292,7 +325,7 @@ class CasioInterpreter(NodeVisitor):
             self._set_color(False)
             setpixel(self.renderer, x, y)
             self._render_end()
-            self._handle_events()
+            self._handle_events(delay=True)
         else:
             raise Exception('Unknown BinaryBuiltin op type: {}'.format(node.op.type))
 
@@ -336,6 +369,9 @@ class CasioInterpreter(NodeVisitor):
         if node.op.type == INTG:
             value = self._visit(node.arg1)
             return int(value)
+        elif node.op.type == FRAC:
+            value = self._visit(node.arg1)
+            return value - int(value)
         else:
             raise Exception('Unknown UnaryFunc op type: {}'.format(node.op.type))
 
@@ -348,6 +384,8 @@ class CasioInterpreter(NodeVisitor):
             raise ControlLoopBreakException()
         elif node.op.type == RETURN:
             raise SubroutineReturnException()
+        elif node.op.type == STOP:
+            raise ProgramStopException()
         else:
             raise Exception('Unknown NullaryBuiltin op type: {}'.format(node.op.type))
 
@@ -440,47 +478,48 @@ class CasioInterpreter(NodeVisitor):
         stepvalue = self._visit(node.step)
         endvalue = self._visit(node.end)
 
-        check_fn = lambda : self._retrieve(node.var) == endvalue
+        check_fn = lambda x: x == endvalue
 
         if currentvalue < endvalue:
             if stepvalue <= 0:
                 print 'WRN: ForTo loop is invalid! start=%s step=%s end=%s' % (
                     currentvalue, stepvalue, endvalue)
-                return
-            check_fn = lambda : self._retrieve(node.var) <= endvalue
+                check_fn = lambda x: False
+            else:
+                check_fn = lambda x: x <= endvalue
 
         elif currentvalue > endvalue:
             if stepvalue >= 0:
                 print 'WRN: ForTo loop is invalid! start=%s step=%s end=%s' % (
                     currentvalue, stepvalue, endvalue)
-                return
-            check_fn = lambda : self._retrieve(node.var) >= endvalue
+                check_fn = lambda x: False
+            else:
+                check_fn = lambda x: x >= endvalue
 
         self._assign(currentvalue, node.var)
-
-        while check_fn():
+        alive = check_fn(currentvalue)
+        while alive:
             try:
-                for statement in node.children:
-                    self._visit(statement)
+                self._run_statements(node.children)
             except ControlLoopBreakException:
                 break
 
-            self._assign(self._retrieve(node.var) + stepvalue, node.var)
+            newvalue = self._retrieve(node.var) + stepvalue
+            alive = check_fn(newvalue)
+            if alive:
+                self._assign(newvalue, node.var)
 
     def _visit_IfThen(self, node):
         if self._eval_bool(node.condition):
-            for statement in node.if_clause:
-                self._visit(statement)
+            self._run_statements(node.if_clause)
         else:
-            for statement in node.else_clause:
-                self._visit(statement)
+            self._run_statements(node.else_clause)
 
     def _visit_DoLpWhile(self, node):
         c = True
         while c:
             try:
-                for statement in node.children:
-                    self._visit(statement)
+                self._run_statements(node.children)
             except ControlLoopBreakException:
                 break
 
@@ -489,7 +528,12 @@ class CasioInterpreter(NodeVisitor):
     def _visit_WhileLoop(self, node):
         while self._eval_bool(node.condition):
             try:
-                for statement in node.children:
-                    self._visit(statement)
+                self._run_statements(node.children)
             except ControlLoopBreakException:
                 break
+
+    def _visit_Label(self, node):
+        pass
+
+    def _visit_Goto(self, node):
+        raise GotoException(node)
