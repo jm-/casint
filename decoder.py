@@ -2,7 +2,7 @@ import struct
 
 import bitstring
 
-from interpreter import *
+from interpreter import Lexer, Parser
 
 class CasioProgram(object):
     def __init__(self, name, text):
@@ -16,7 +16,7 @@ class CasioProgram(object):
         self.tree = self.parser.parse()
 
     def __str__(self):
-        return '%-8s %5d' % (self.name, self.size)
+        return '%-8s    : %5d ' % (self.name, self.size)
 
     def __repr__(self):
         return self.__str__()

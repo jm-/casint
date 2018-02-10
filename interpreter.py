@@ -647,11 +647,17 @@ class Parser(object):
 
         elif token.type == LBL:
             self.eat(LBL)
-            node = Label(self.num())
+            if self.current_token.type == INTEGER:
+                node = Label(self.num())
+            else:
+                node = Label(self.variable())
 
         elif token.type == GOTO:
             self.eat(GOTO)
-            node = Goto(self.num())
+            if self.current_token.type == INTEGER:
+                node = Goto(self.num())
+            else:
+                node = Goto(self.variable())
 
         elif token.type == IF:
             node = self.if_then()
