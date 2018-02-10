@@ -168,12 +168,12 @@ class CasioInterpreter(NodeVisitor):
 
     def _run_prog(self, name):
         program = self.programs.get(name)
-        print 'DBG: entering subroutine: %r' % (name,)
+        #print 'DBG: entering subroutine: %r' % (name,)
         try:
             self._visit(program.tree)
         except SubroutineReturnException:
             pass
-        print 'DBG: returned from subroutine: %r' % (name,)
+        #print 'DBG: returned from subroutine: %r' % (name,)
 
     def _save_pic(self, num):
         pic = sdl2.SDL_CreateTexture(
@@ -231,11 +231,7 @@ class CasioInterpreter(NodeVisitor):
             raise Exception('Unknown variable retrieval node: {}'.format(type(node).__name__))
 
     def _eval_bool(self, node):
-        #print 'bools', type(node)
         value = self._visit(node)
-
-        #print 'boolean evaling:', repr(value)
-
         return bool(value)
 
     def _getkey(self):
@@ -302,7 +298,7 @@ class CasioInterpreter(NodeVisitor):
             if type(s) is not str:
                 s = str(s)
             self._render_begin()
-            print 'text:', repr(s)
+            #print 'text:', repr(s)
             text(self.renderer, self.texture_font, x, y, s)
             self._render_end()
             self._handle_events(delay=True)
