@@ -13,10 +13,19 @@ class CasioProgram(object):
         self.parser = Parser(lexer)
 
     def parse(self):
-        self.tree = self.parser.parse()
+        try:
+            self.tree = self.parser.parse()
+        except:
+            self.tree = None
+            #import sys, traceback
+            #e = sys.exc_info()
+            #trace = '' if e[0] is None else ''.join(traceback.format_exception(*e))
+            #print trace
 
     def __str__(self):
-        return '%-8s    : %5d ' % (self.name, self.size)
+        isParsed = hasattr(self, 'tree') and self.tree
+        status = '(valid)' if isParsed else '(invalid)'
+        return '%-8s    : %5d %s' % (self.name, self.size, status)
 
     def __repr__(self):
         return self.__str__()
