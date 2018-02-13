@@ -28,3 +28,8 @@ Drop the appropriate DLL in lib/32 or lib/64.
 ```
 python run.py input/captures/SCUM2.G1M
 ```
+
+## Comments
+
+The program is parsed into an abstract syntax tree (AST) and nodes interpreted recursively. While this is simple to code, the program does not actually reflect the source and, as such, certain jump instructions like GOTO or ISZ/DSZ are not completely implemented.
+Future work will involve constructing a control flow graph (CFG) from the AST and interpreting that instead.
