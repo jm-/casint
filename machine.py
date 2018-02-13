@@ -22,6 +22,10 @@ class ProgramStopException(Exception):
     pass
 
 
+class InterpreterQuitException(Exception):
+    pass
+
+
 class GotoException(Exception):
     def __init__(self, node):
         super(GotoException, self).__init__()
@@ -41,7 +45,6 @@ class NodeVisitor(object):
 
 class CasioInterpreter(NodeVisitor):
     def __init__(self, programs):
-        self.running = True
         self.key = None
 
         self.programs = {}
@@ -145,8 +148,7 @@ class CasioInterpreter(NodeVisitor):
         setkey = False
         while sdl2.SDL_PollEvent(ctypes.byref(event)) != 0:
             if event.type == sdl2.SDL_QUIT:
-                self.running = False
-                return
+                raise InterpreterQuitException()
             elif event.type == sdl2.SDL_KEYDOWN:
                 self.key = event.key.keysym.sym
                 setkey = True
@@ -174,7 +176,6 @@ class CasioInterpreter(NodeVisitor):
         sdl2.SDL_Quit()
 
     def run(self, name):
-        self.running = True
         program = self.programs.get(name)
         self._set_window_title(name)
         try:
@@ -183,7 +184,7 @@ class CasioInterpreter(NodeVisitor):
             pass
 
     def idle(self):
-        while self.running:
+        while True:
             self._handle_events(delay=True)
 
     # =========================================================================
