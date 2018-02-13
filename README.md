@@ -22,7 +22,7 @@ pip install -r requirements.txt
 
 If using Windows, it's sufficient to download a runtime binary from https://www.libsdl.org/download-2.0.php
 
-Drop the appropriate DLL in lib/32 or lib/64.
+Drop the appropriate DLL in lib/32 or lib/64. Might need to create these directories.
 
 4. Run it!
 ```
@@ -33,3 +33,7 @@ python run.py input/captures/SCUM2.G1M
 
 The program is parsed into an abstract syntax tree (AST) and nodes interpreted recursively. While this is simple to code, the program does not actually reflect the source and, as such, certain jump instructions like GOTO or ISZ/DSZ are not completely implemented.
 Future work will involve constructing a control flow graph (CFG) from the AST and interpreting that instead.
+
+## References
+
+The excellent blog posts at https://ruslanspivak.com/lsbasi-part1/
