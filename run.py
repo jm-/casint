@@ -11,7 +11,7 @@ except ImportError:
     import sdl2
 
 from decoder import G1mFile, CasioProgram
-from machine import CasioInterpreter
+from machine import CasioInterpreter, InterpreterQuitException
 
 def main(filepath):
     g1mfile = G1mFile(filepath, debug=False)
@@ -37,16 +37,18 @@ def main(filepath):
                         selection = -1
 
                 interpreter.run(programs[selection].name)
+        except InterpreterQuitException:
+            return 0
         except:
             import sys, traceback
             e = sys.exc_info()
             trace = '' if e[0] is None else ''.join(traceback.format_exception(*e))
             print trace
-            print interpreter.vars, interpreter.mats
-            #return 2
+            #print interpreter.vars, interpreter.mats
+            return 2
 
         # wait for user to close program
-        interpreter.idle()
+        #interpreter.idle()
 
     return 0
 
