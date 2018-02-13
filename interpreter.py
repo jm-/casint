@@ -73,10 +73,16 @@ class Lexer(object):
         result = ''
         self.advance()
         while self.current_char is not None and self.current_char != '"':
-            # todo: process non-characters into string
             result += self.current_char
             self.advance()
         self.advance()
+        return result
+
+    def comment(self):
+        result = ''
+        while self.current_char is not None and self.current_char not in (':', '\x0d'):
+            result += self.current_char
+            self.advance()
         return result
 
     def get_next_token(self):
@@ -112,9 +118,17 @@ class Lexer(object):
                 self.advance()
                 return Token(PROG, 'Prog')
 
+            if self.current_char == '\xee':
+                self.advance()
+                return Token(GRAPHYEQ, 'Graph Y=')
+
             if self.current_char == '\xe2':
                 self.advance()
                 return Token(LBL, 'Lbl ')
+
+            if self.current_char == '\x95':
+                self.advance()
+                return Token(LOG, 'log ')
 
             if self.current_char == '\xde':
                 self.advance()
@@ -258,10 +272,20 @@ class Lexer(object):
                 self.advance()
                 return Token(TEXT, 'Text ')
 
+            if self.current_char == '\xf7' and self.peek() == '\xa6':
+                self.advance()
+                self.advance()
+                return Token(CIRCLE, 'Circle ')
+
             if self.current_char == '\xf7' and self.peek() == '\xa7':
                 self.advance()
                 self.advance()
                 return Token(FLINE, 'F-Line ')
+
+            if self.current_char == '\xf7' and self.peek() == '\xa8':
+                self.advance()
+                self.advance()
+                return Token(PLOTON, 'PlotOn ')
 
             if self.current_char == '\xf7' and self.peek() == '\xab':
                 self.advance()
@@ -283,6 +307,26 @@ class Lexer(object):
                 self.advance()
                 return Token(PXLTEST, 'PxlTest(')
 
+            if self.current_char == '\xf7' and self.peek() == '\xd3':
+                self.advance()
+                self.advance()
+                return Token(COORDOFF, 'CoordOff')
+
+            if self.current_char == '\xf7' and self.peek() == '\x7a':
+                self.advance()
+                self.advance()
+                return Token(GRIDOFF, 'GridOff')
+
+            if self.current_char == '\xf7' and self.peek() == '\xd2':
+                self.advance()
+                self.advance()
+                return Token(AXESOFF, 'AxesOff')
+
+            if self.current_char == '\xf7' and self.peek() == '\xd4':
+                self.advance()
+                self.advance()
+                return Token(LABELOFF, 'LabelOff')
+
             if self.current_char == ',':
                 self.advance()
                 return Token(COMMA, ',')
@@ -298,6 +342,10 @@ class Lexer(object):
             if self.current_char == '\x10':
                 self.advance()
                 return Token(LTE, '<=')
+
+            if self.current_char == '\x12':
+                self.advance()
+                return Token(GTE, '>=')
 
             if self.current_char == '\x11':
                 self.advance()
@@ -315,9 +363,17 @@ class Lexer(object):
                 self.advance()
                 return Token(INLINEIF, '=>')
 
+            if self.current_char == '\x0c':
+                self.advance()
+                return Token(DISP, 'DISP')
+
             if self.current_char == '\x0d':
                 self.advance()
                 return Token(SEMI, 'EOL')
+
+            if self.current_char == '?':
+                self.advance()
+                return Token(PROMPT, '?')
 
             if self.current_char == '\x0e':
                 self.advance()
@@ -334,6 +390,9 @@ class Lexer(object):
             if self.current_char == '"':
                 return Token(STRING, self.string())
 
+            if self.current_char == '\'':
+                return Token(COMMENT, self.comment())
+
             if self.current_char == '\x89':
                 self.advance()
                 return Token(PLUS, '+')
@@ -349,6 +408,18 @@ class Lexer(object):
             if self.current_char == '\xb9':
                 self.advance()
                 return Token(DIV, '/')
+
+            if self.current_char == '\xa6':
+                self.advance()
+                return Token(INTG, 'Int ')
+
+            if self.current_char == '\xa8':
+                self.advance()
+                return Token(POWER, '^')
+
+            if self.current_char == '\x8b':
+                self.advance()
+                return Token(SQUARED, '^2')
 
             if self.current_char == '(':
                 self.advance()
@@ -589,9 +660,6 @@ class Parser(object):
             self.current_token = token
 
     def program(self):
-        """
-        program : statement_list
-        """
         root = Program()
         nodes = self.statement_list()
         for node in nodes:
@@ -599,30 +667,43 @@ class Parser(object):
         return root
 
     def statement_list(self):
-        """
-        statement_list : statement
-                       | statement SEMI statement_list
-        """
         node = self.statement()
 
         results = [node]
 
-        while self.current_token.type == SEMI:
-            self.eat(SEMI)
+        while self.current_token.type in (SEMI, DISP):
+            if self.current_token.type == SEMI:
+                self.eat(SEMI)
+            else:
+                results.append(NullaryBuiltin(self.current_token))
+                self.eat(DISP)
+
             if self.current_token.type != EOF:
                 results.append(self.statement())
 
         return results
 
     def statement(self):
-        """
-        statement : .....
-                  | empty
-        """
         token = self.current_token
 
         if token.type == CLS:
             self.eat(CLS)
+            node = NullaryBuiltin(token)
+
+        elif token.type == COORDOFF:
+            self.eat(COORDOFF)
+            node = NullaryBuiltin(token)
+
+        elif token.type == GRIDOFF:
+            self.eat(GRIDOFF)
+            node = NullaryBuiltin(token)
+
+        elif token.type == AXESOFF:
+            self.eat(AXESOFF)
+            node = NullaryBuiltin(token)
+
+        elif token.type == LABELOFF:
+            self.eat(LABELOFF)
             node = NullaryBuiltin(token)
 
         elif token.type == CLRTEXT:
@@ -630,8 +711,12 @@ class Parser(object):
             node = NullaryBuiltin(token)
 
         elif token.type == STRING:
-            self.eat(STRING)
-            node = NullaryBuiltin(token)
+            node = UnaryBuiltin(token, self.string_literal())
+
+        elif token.type == COMMENT:
+            self.eat(COMMENT)
+            # don't propagate comments to special AST nodes
+            node = self.empty()
 
         elif token.type == RETURN:
             self.eat(RETURN)
@@ -728,8 +813,28 @@ class Parser(object):
             arg4 = self.expr()
             node = QuaternaryBuiltin(token, arg1, arg2, arg3, arg4)
 
+        elif token.type == CIRCLE:
+            self.eat(CIRCLE)
+            arg1 = self.expr()
+            self.eat(COMMA)
+            arg2 = self.expr()
+            self.eat(COMMA)
+            arg3 = self.expr()
+            node = TernaryBuiltin(token, arg1, arg2, arg3)
+
         elif token.type == HORIZONTAL:
             self.eat(HORIZONTAL)
+            node = UnaryBuiltin(token, self.expr())
+
+        elif token.type == PLOTON:
+            self.eat(PLOTON)
+            arg1 = self.expr()
+            self.eat(COMMA)
+            arg2 = self.expr()
+            node = BinaryBuiltin(token, arg1, arg2)
+
+        elif token.type == GRAPHYEQ:
+            self.eat(GRAPHYEQ)
             node = UnaryBuiltin(token, self.expr())
 
         elif token.type == PXLON:
@@ -771,6 +876,9 @@ class Parser(object):
         elif token.type == LBRACE:
             node = self.initialize_memory()
 
+        elif token.type == LBRACKET:
+            node = self.initialize_memory_values()
+
         else:
             # read ahead.
             if self.try_parse(self.assignment_statement):
@@ -782,7 +890,6 @@ class Parser(object):
             else:
                 node = self.empty()
 
-        #print 'statement ->', node
         return node
 
     def if_then(self):
@@ -866,14 +973,34 @@ class Parser(object):
 
     def initialize_memory(self):
         self.eat(LBRACE)
-        x = self.num()
+        x = self.expr()
         self.eat(COMMA)
-        y = self.num()
+        y = self.expr()
         self.eat(RBRACE)
         self.eat(ASSIGN)
         self.eat(DIM)
         right = self.memory_structure()
         node = Initialize((x, y), right)
+        return node
+
+    def initialize_memory_values(self):
+        rows = []
+        self.eat(LBRACKET)
+        while self.current_token.type not in (RBRACKET, ASSIGN):
+            row = []
+            self.eat(LBRACKET)
+            while self.current_token.type not in (RBRACKET, ASSIGN):
+                row.append(self.num())
+                if self.current_token.type == COMMA:
+                    self.eat(COMMA)
+            if self.current_token.type == RBRACKET:
+                self.eat(RBRACKET)
+            rows.append(row)
+        if self.current_token.type == RBRACKET:
+            self.eat(RBRACKET)
+        self.eat(ASSIGN)
+        right = self.memory_structure()
+        node = Initialize(rows, right)
         return node
 
     def memory_structure(self):
@@ -920,21 +1047,14 @@ class Parser(object):
         return node
 
     def variable(self):
-        """
-        variable : VARIABLE
-        """
         node = Var(self.current_token)
         self.eat(VARIABLE)
         return node
 
     def empty(self):
-        """An empty production"""
         return NoOp()
 
     def condition(self):
-        """
-        condition : and_condition (OR and_condition)*
-        """
         node = self.and_condition()
 
         while self.current_token.type == OR:
@@ -946,9 +1066,6 @@ class Parser(object):
         return node
 
     def and_condition(self):
-        """
-        and_condition : bexp (AND bexp)*
-        """
         node = self.bexp()
 
         while self.current_token.type == AND:
@@ -965,11 +1082,11 @@ class Parser(object):
             self.eat(NOT)
             node = UnaryOp(token, self.bexp())
             return node
-        elif token.type == LPAREN:
-            self.eat(LPAREN)
-            node = self.condition()
-            self.eat(RPAREN)
-            return node
+        #elif token.type == LPAREN:
+        #    self.eat(LPAREN)
+        #    node = self.condition()
+        #    self.eat(RPAREN)
+        #    return node
         
         left = self.expr()
         token = self.current_token
@@ -991,9 +1108,6 @@ class Parser(object):
         return node
 
     def expr(self):
-        """
-        expr : term ((PLUS | MINUS) term)*
-        """
         node = self.term()
 
         while self.current_token.type in (PLUS, MINUS):
@@ -1008,10 +1122,7 @@ class Parser(object):
         return node
 
     def term(self):
-        """
-        term : term_shorthand ((MUL | DIV) term_shorthand)*
-        """
-        node = self.term_shorthand()
+        node = self.expo()
 
         while self.current_token.type in (MUL, DIV):
             token = self.current_token
@@ -1020,20 +1131,30 @@ class Parser(object):
             elif token.type == DIV:
                 self.eat(DIV)
 
+            node = BinOp(left=node, op=token, right=self.expo())
+
+        return node
+
+    def expo(self):
+        node = self.term_shorthand()
+
+        while self.current_token.type in (POWER, SQUARED):
+            token = self.current_token
+            if token.type == POWER:
+                self.eat(POWER)
+            if token.type == SQUARED:
+                self.eat(SQUARED)
+
             node = BinOp(left=node, op=token, right=self.term_shorthand())
 
         return node
 
     def term_shorthand(self):
-        """
-        term : factor ((expr))*
-             | factor (factor_ref)*
-        """
         node = self.factor()
 
         while True:
             token = self.current_token
-            if token.type in (RANDNUM, GETKEY, PXLTEST, INTG, FRAC, LPAREN):
+            if token.type in (RANDNUM, PROMPT, GETKEY, PXLTEST, INTG, FRAC, LPAREN):
                 token = Token(MUL, '*')
                 node = BinOp(left=node, op=token, right=self.factor())
             elif self.try_parse(self.factor_ref):
@@ -1045,12 +1166,6 @@ class Parser(object):
         return node
 
     def factor(self):
-        """factor : PLUS factor
-                  | MINUS factor
-                  | INTEGER
-                  | ( expr )
-                  | factor_ref
-        """
         token = self.current_token
         if token.type == PLUS:
             self.eat(PLUS)
@@ -1067,6 +1182,10 @@ class Parser(object):
             self.eat(RANDNUM)
             node = NullaryFunc(token)
             return node
+        elif token.type == PROMPT:
+            self.eat(PROMPT)
+            node = NullaryFunc(token)
+            return node
         elif token.type == GETKEY:
             self.eat(GETKEY)
             node = NullaryFunc(token)
@@ -1078,6 +1197,10 @@ class Parser(object):
             arg2 = self.expr()
             self.eat(RPAREN)
             node = BinaryFunc(token, arg1, arg2)
+            return node
+        elif token.type == LOG:
+            self.eat(LOG)
+            node = UnaryFunc(token, self.term_shorthand())
             return node
         elif token.type == INTG:
             self.eat(INTG)

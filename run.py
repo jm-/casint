@@ -8,12 +8,13 @@ except ImportError:
     arch, osname = platform.architecture()
     if osname == 'WindowsPE':
         os.environ['PYSDL2_DLL_PATH'] = 'lib/32' if arch == '32bit' else 'lib/64'
+    import sdl2
 
 from decoder import G1mFile, CasioProgram
 from machine import CasioInterpreter
 
 def main(filepath):
-    g1mfile = G1mFile(filepath)
+    g1mfile = G1mFile(filepath, debug=False)
 
     print 'Processing G1M file...'
     programs = g1mfile.load()
@@ -52,7 +53,6 @@ def main(filepath):
 if __name__ == '__main__':
 
     if len(sys.argv) == 2:
-        # debugging: remove assignment
         sys.exit(main(sys.argv[1]))
     else:
         print 'Usage: %s <file.g1m>' % (sys.argv[0],)

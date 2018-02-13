@@ -5,7 +5,7 @@ import sdl2
 
 from common import *
 from interpreter import Var, VariableRange, MemoryIndex, Label
-from graphics import setpixel, pxltest, fline, text
+from graphics import setpixel, pxltest, fline, text, locate
 
 SDL_DELAY_MILLIS = 25
 
@@ -53,10 +53,12 @@ class CasioInterpreter(NodeVisitor):
         self._initialize_mats()
         self._initialize_pics()
         self._initialize_sdl2()
+        self._initialize_text()
 
         self._refresh_screen()
 
     def _initialize_vars(self):
+        # initialize all vars to 0
         self.vars = dict((v, 0) for v in ALPHA_MEM_CHARS)
 
     def _initialize_mats(self):
@@ -78,16 +80,33 @@ class CasioInterpreter(NodeVisitor):
 
         sdl2.SDL_RenderSetLogicalSize(self.renderer, 128, 64)
 
-        self.texture = sdl2.SDL_CreateTexture(
+        self.texture_graph = sdl2.SDL_CreateTexture(
+            self.renderer, sdl2.SDL_PIXELFORMAT_RGBA8888,
+            sdl2.SDL_TEXTUREACCESS_TARGET, 128, 64)
+
+        self.texture_text = sdl2.SDL_CreateTexture(
+            self.renderer, sdl2.SDL_PIXELFORMAT_RGBA8888,
+            sdl2.SDL_TEXTUREACCESS_TARGET, 128, 64)
+
+        # for scrolling the text screen
+        self.texture_scroll = sdl2.SDL_CreateTexture(
             self.renderer, sdl2.SDL_PIXELFORMAT_RGBA8888,
             sdl2.SDL_TEXTUREACCESS_TARGET, 128, 64)
 
         # init with a clear screen
-        self._render_begin()
+        self._render_begin(self.texture_graph)
         self._clear_screen()
         self._render_end()
 
-        self.texture_font = self._load_texture('img/text.bmp')
+        self._render_begin(self.texture_text)
+        self._clear_screen()
+        self._render_end()
+
+        self.font_graph = self._load_texture('img/font_graph.bmp')
+        self.font_text = self._load_texture('img/font_text.bmp')
+
+    def _initialize_text(self):
+        self.text_line = 0
 
     def _load_texture(self, filename):
         surface = sdl2.SDL_LoadBMP(filename)
@@ -96,8 +115,9 @@ class CasioInterpreter(NodeVisitor):
         sdl2.SDL_FreeSurface(surface)
         return texture
 
-    def _render_begin(self):
-        sdl2.SDL_SetRenderTarget(self.renderer, self.texture)
+    def _render_begin(self, texture_target):
+        self.current_texture = texture_target
+        sdl2.SDL_SetRenderTarget(self.renderer, self.current_texture)
 
     def _render_end(self):
         sdl2.SDL_SetRenderTarget(self.renderer, None)
@@ -113,7 +133,7 @@ class CasioInterpreter(NodeVisitor):
         sdl2.SDL_RenderClear(self.renderer)
 
     def _refresh_screen(self):
-        sdl2.SDL_RenderCopy(self.renderer, self.texture, None, None)
+        sdl2.SDL_RenderCopy(self.renderer, self.current_texture, None, None)
         sdl2.SDL_RenderPresent(self.renderer)
 
     def _set_window_title(self, name):
@@ -141,7 +161,11 @@ class CasioInterpreter(NodeVisitor):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        sdl2.SDL_DestroyTexture(self.texture)
+        sdl2.SDL_DestroyTexture(self.texture_graph)
+        sdl2.SDL_DestroyTexture(self.texture_text)
+        sdl2.SDL_DestroyTexture(self.texture_scroll)
+        sdl2.SDL_DestroyTexture(self.font_text)
+        sdl2.SDL_DestroyTexture(self.font_graph)
         # clean up stored pics
         for pic in self.pics.values():
             sdl2.SDL_DestroyTexture(pic)
@@ -176,21 +200,42 @@ class CasioInterpreter(NodeVisitor):
         #print 'DBG: returned from subroutine: %r' % (name,)
 
     def _save_pic(self, num):
-        pic = sdl2.SDL_CreateTexture(
-            self.renderer, sdl2.SDL_PIXELFORMAT_RGBA8888,
-            sdl2.SDL_TEXTUREACCESS_TARGET, 128, 64)
-        # render to new pic
+        pic = self.pics.get(num)
+        if not pic:
+            pic = sdl2.SDL_CreateTexture(
+                self.renderer, sdl2.SDL_PIXELFORMAT_RGBA8888,
+                sdl2.SDL_TEXTUREACCESS_TARGET, 128, 64)
+            self.pics[num] = pic
+        # render current texture to pic
         sdl2.SDL_SetRenderTarget(self.renderer, pic)
-        sdl2.SDL_RenderCopy(self.renderer, self.texture, None, None)
+        sdl2.SDL_RenderCopy(self.renderer, self.texture_graph, None, None)
         sdl2.SDL_SetRenderTarget(self.renderer, None)
-
-        self.pics[num] = pic
 
     def _load_pic(self, num):
         pic = self.pics[num]
-        # render to existing texture
-        self._render_begin()
+        # render pic to current texture
+        self._render_begin(self.texture_graph)
         sdl2.SDL_RenderCopy(self.renderer, pic, None, None)
+        self._render_end()
+
+    def _locate_out(self, message):
+        # todo: wrap lines that are long
+        if self.text_line > 7:
+            # it's scroll time! Save the current texture
+            sdl2.SDL_SetRenderTarget(self.renderer, self.texture_scroll)
+            sdl2.SDL_RenderCopy(self.renderer, self.texture_text, None, None)
+            # wipe the current texture
+            self._render_begin(self.texture_text)
+            self._clear_screen()
+            # write the bottom of the scrolled texture to the top of out text screen
+            src = sdl2.SDL_Rect(0, 8, 128, 56)
+            dst = sdl2.SDL_Rect(0, 0, 128, 56)
+            sdl2.SDL_RenderCopy(self.renderer, self.texture_scroll, src, dst)
+            locate(self.renderer, self.font_text, 1, 7, message)
+        else:
+            self._render_begin(self.texture_text)
+            locate(self.renderer, self.font_text, 1, self.text_line, message)
+            self.text_line += 1
         self._render_end()
 
     def _assign(self, value, node):
@@ -236,7 +281,8 @@ class CasioInterpreter(NodeVisitor):
 
     def _getkey(self):
         self._handle_events(delay=True)
-        return SDL_CASIO_KEYMAP.get(self.key, DEFAULT_CASIO_GETKEY)
+        casio_key = SDL_CASIO_KEYMAP.get(self.key, DEFAULT_CASIO_GETKEY)
+        return casio_key
 
     def _run_statements(self, statements):
         goto = None
@@ -282,7 +328,7 @@ class CasioInterpreter(NodeVisitor):
             y0 = self._visit(node.arg2)
             x1 = self._visit(node.arg3)
             y1 = self._visit(node.arg4)
-            self._render_begin()
+            self._render_begin(self.texture_graph)
             self._set_color(True)
             fline(self.renderer, x0, y0, x1, y1)
             self._render_end()
@@ -297,9 +343,20 @@ class CasioInterpreter(NodeVisitor):
             s = self._visit(node.arg3)
             if type(s) is not str:
                 s = str(s)
-            self._render_begin()
+            self._render_begin(self.texture_graph)
             #print 'text:', repr(s)
-            text(self.renderer, self.texture_font, x, y, s)
+            text(self.renderer, self.font_graph, x, y, s)
+            self._render_end()
+            self._handle_events(delay=True)
+        elif node.op.type == LOCATE:
+            x = self._visit(node.arg1)
+            y = self._visit(node.arg2)
+            s = self._visit(node.arg3)
+            if type(s) is not str:
+                s = str(s)
+            self._render_begin(self.texture_text)
+            #print 'text:', repr(s)
+            locate(self.renderer, self.font_text, x, y, s)
             self._render_end()
             self._handle_events(delay=True)
         else:
@@ -309,7 +366,7 @@ class CasioInterpreter(NodeVisitor):
         if node.op.type == PXLON:
             y = self._visit(node.arg1)
             x = self._visit(node.arg2)
-            self._render_begin()
+            self._render_begin(self.texture_graph)
             self._set_color(True)
             setpixel(self.renderer, x, y)
             self._render_end()
@@ -317,7 +374,7 @@ class CasioInterpreter(NodeVisitor):
         elif node.op.type == PXLOFF:
             y = self._visit(node.arg1)
             x = self._visit(node.arg2)
-            self._render_begin()
+            self._render_begin(self.texture_graph)
             self._set_color(False)
             setpixel(self.renderer, x, y)
             self._render_end()
@@ -329,7 +386,7 @@ class CasioInterpreter(NodeVisitor):
         if node.op.type == PXLTEST:
             y = self._visit(node.arg1)
             x = self._visit(node.arg2)
-            self._render_begin()
+            self._render_begin(self.texture_graph)
             is_lit = pxltest(self.renderer, x, y)
             self._render_end()
             return 1 if is_lit else 0
@@ -339,7 +396,7 @@ class CasioInterpreter(NodeVisitor):
     def _visit_UnaryBuiltin(self, node):
         if node.op.type == HORIZONTAL:
             y = self._visit(node.arg1)
-            self._render_begin()
+            self._render_begin(self.texture_graph)
             self._set_color(True)
             fline(self.renderer, 1, y, 127, y)
             self._render_end()
@@ -358,6 +415,10 @@ class CasioInterpreter(NodeVisitor):
         elif node.op.type == DSZ:
             # NB: this is an incomplete impl!
             self._assign(self._retrieve(node.arg1) - 1, node.arg1)
+        elif node.op.type == STRING:
+            # todo: render to display, not terminal
+            s = self._visit(node.arg1)
+            self._locate_out(s)
         else:
             raise Exception('Unknown UnaryBuiltin op type: {}'.format(node.op.type))
 
@@ -373,8 +434,13 @@ class CasioInterpreter(NodeVisitor):
 
     def _visit_NullaryBuiltin(self, node):
         if node.op.type == CLS:
-            self._render_begin()
+            self._render_begin(self.texture_graph)
             self._clear_screen()
+            self._render_end()
+        elif node.op.type == CLRTEXT:
+            self._render_begin(self.texture_text)
+            self._clear_screen()
+            self.text_line = 1
             self._render_end()
         elif node.op.type == BREAK:
             raise ControlLoopBreakException()
