@@ -6,7 +6,7 @@ from interpreter import Lexer, Parser
 
 class CasioProgram(object):
     def __init__(self, name, text):
-        self.name = name.rstrip('\x00')
+        self.name = name.rstrip(b'\x00')
         self.size = len(text)
         # first 10 bytes are reserved
         lexer = Lexer(text[10:])
@@ -17,10 +17,6 @@ class CasioProgram(object):
             self.tree = self.parser.parse()
         except:
             self.tree = None
-            #import sys, traceback
-            #e = sys.exc_info()
-            #trace = '' if e[0] is None else ''.join(traceback.format_exception(*e))
-            #print trace
 
     def __str__(self):
         isParsed = hasattr(self, 'tree') and self.tree
@@ -55,10 +51,10 @@ class G1mFile(object):
         ) = struct.unpack('>8sB5sB1sIB9sH', headerIbytes)
 
         if self.debug:
-            print 'fileIdentifier', fileIdentifier
-            print 'fileTypeIdentifier', fileTypeIdentifier
-            print 'totalFileSize', totalFileSize
-            print 'numItems', numItems
+            print(f'fileIdentifier={fileIdentifier}')
+            print(f'fileTypeIdentifier={fileTypeIdentifier}')
+            print(f'totalFileSize={totalFileSize}')
+            print(f'numItems={numItems}')
 
         # validate the control bytes
         lsb = totalFileSize % 256
@@ -66,8 +62,8 @@ class G1mFile(object):
         assert (lsb + 0xb8) % 256 == controlByte2
 
         # validate magic sequences
-        assert magicSequence1 == '\x00\x10\x00\x10\x00'
-        assert magicSequence2 == '\x01'
+        assert magicSequence1 == b'\x00\x10\x00\x10\x00'
+        assert magicSequence2 == b'\x01'
 
         return numItems
 
@@ -80,9 +76,9 @@ class G1mFile(object):
         ) = struct.unpack('>16s3sB', itemHeader1)
 
         if self.debug:
-            print 'itemIdentifier', itemIdentifier
-            print 'reservedSequence1', reservedSequence1
-            print 'itemHeaderTypeIdentifier', itemHeaderTypeIdentifier
+            print(f'itemIdentifier={itemIdentifier}')
+            print(f'reservedSequence1={reservedSequence1}')
+            print(f'itemHeaderTypeIdentifier={itemHeaderTypeIdentifier}')
 
         # make sure we're dealing with a known item type,
         # so that itemHeader2 can be safely decoded
@@ -98,11 +94,11 @@ class G1mFile(object):
         ) = struct.unpack('>8s8sBI3s', itemHeader2)
 
         if self.debug:
-            print 'memLocationName', memLocationName
-            print 'itemTitle', itemTitle
-            print 'itemTypeIdentifier', itemTypeIdentifier
-            print 'itemLength', itemLength
-            print 'reservedSequence2', reservedSequence2
+            print(f'memLocationName={memLocationName}')
+            print(f'itemTitle={itemTitle}')
+            print(f'itemTypeIdentifier={itemTypeIdentifier}')
+            print(f'itemLength={itemLength}')
+            print(f'reservedSequence2={reservedSequence2}')
 
         # read the rest of the item
         itemData = fp.read(itemLength)
@@ -121,7 +117,7 @@ class G1mFile(object):
             i = 0
             while i < numItems:
                 if self.debug:
-                    print '---------- reading item %d' % (i,)
+                    print(f'---------- reading item {i}')
                 programs[i] = self._read_item(fp)
                 i += 1
             return programs

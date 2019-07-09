@@ -1,5 +1,6 @@
 from common import *
 
+
 class Token(object):
     def __init__(self, type, value):
         self.type = type
@@ -20,18 +21,22 @@ def is_variable(char):
 
 
 def is_numeric(char):
-    return char in '01234567890.'
+    return char in b'01234567890.'
 
 class Lexer(object):
     def __init__(self, text):
         self.text = text
         self.pos = 0
-        self.current_char = self.text[self.pos]
-        if self.current_char == '\x00':
+        self.current_char = self.text[self.pos:self.pos+1]
+        if self.current_char == b'\x00':
             self.current_char = None
 
     def error(self):
-        raise Exception('Invalid character: pos=%d chrs=%r' % (self.pos, self.text[self.pos:self.pos+5]))
+        raise Exception(
+            f'Invalid character:'
+            f' pos={self.pos}'
+            f' chrs={self.text[self.pos:self.pos+5]}'
+        )
 
     def advance(self):
         """Advance the `pos` pointer and set the `current_char` variable."""
@@ -39,8 +44,8 @@ class Lexer(object):
         if self.pos >= len(self.text):
             self.current_char = None  # Indicates end of input
         else:
-            self.current_char = self.text[self.pos]
-            if self.current_char == '\x00':
+            self.current_char = self.text[self.pos:self.pos+1]
+            if self.current_char == b'\x00':
                 self.current_char = None
 
     def freeze(self):
@@ -48,8 +53,8 @@ class Lexer(object):
 
     def seek(self, pos):
         self.pos = pos
-        self.current_char = self.text[self.pos]
-        if self.current_char == '\x00':
+        self.current_char = self.text[self.pos:self.pos+1]
+        if self.current_char == b'\x00':
             self.current_char = None
 
     def peek(self):
@@ -57,30 +62,31 @@ class Lexer(object):
         if peek_pos > len(self.text) - 1:
             return None
         else:
-            return self.text[peek_pos]
+            return self.text[peek_pos:peek_pos+1]
 
     def numeric(self):
         """Return a (multidigit) integer consumed from the input."""
-        result = ''
+        result = b''
         while self.current_char is not None and is_numeric(self.current_char):
             result += self.current_char
             self.advance()
-        if '.' in result:
+        if b'.' in result:
             return float(result)
-        return int(result)
+        return float(int(result))
 
     def string(self):
-        result = ''
+        result = b''
         self.advance()
-        while self.current_char is not None and self.current_char != '"':
+        while self.current_char is not None and self.current_char != b'"':
             result += self.current_char
             self.advance()
         self.advance()
+        #print(f'string lit: {repr(result)}')
         return result
 
     def comment(self):
-        result = ''
-        while self.current_char is not None and self.current_char not in (':', '\x0d'):
+        result = b''
+        while self.current_char is not None and self.current_char not in (b':', b'\x0d'):
             result += self.current_char
             self.advance()
         return result
@@ -91,293 +97,292 @@ class Lexer(object):
         apart into tokens. One token at a time.
         """
         while self.current_char is not None:
+            #print(f'{self.current_char}')
 
-            #print repr(self.current_char)
+            if self.current_char == b'\xd1':
+                self.advance()
+                return Token(CLS, b'Cls')
 
-            if self.current_char == '\xd1':
+            if self.current_char == b'\xe8':
                 self.advance()
-                return Token(CLS, 'Cls')
+                return Token(DSZ, b'Dsz ')
 
-            if self.current_char == '\xe8':
+            if self.current_char == b'\xe9':
                 self.advance()
-                return Token(DSZ, 'Dsz ')
+                return Token(ISZ, b'Isz ')
 
-            if self.current_char == '\xe9':
+            if self.current_char == b'\xeb':
                 self.advance()
-                return Token(ISZ, 'Isz ')
+                return Token(VIEWWINDOW, b'ViewWindow')
 
-            if self.current_char == '\xeb':
+            if self.current_char == b'\xec':
                 self.advance()
-                return Token(VIEWWINDOW, 'ViewWindow')
+                return Token(GOTO, b'Goto ')
 
-            if self.current_char == '\xec':
+            if self.current_char == b'\xed':
                 self.advance()
-                return Token(GOTO, 'Goto ')
+                return Token(PROG, b'Prog')
 
-            if self.current_char == '\xed':
+            if self.current_char == b'\xee':
                 self.advance()
-                return Token(PROG, 'Prog')
+                return Token(GRAPHYEQ, b'Graph Y=')
 
-            if self.current_char == '\xee':
+            if self.current_char == b'\xe2':
                 self.advance()
-                return Token(GRAPHYEQ, 'Graph Y=')
+                return Token(LBL, b'Lbl ')
 
-            if self.current_char == '\xe2':
+            if self.current_char == b'\x95':
                 self.advance()
-                return Token(LBL, 'Lbl ')
+                return Token(LOG, b'log ')
 
-            if self.current_char == '\x95':
+            if self.current_char == b'\xde':
                 self.advance()
-                return Token(LOG, 'log ')
+                return Token(INTG, b'Intg ')
 
-            if self.current_char == '\xde':
+            if self.current_char == b'\xb6':
                 self.advance()
-                return Token(INTG, 'Intg ')
+                return Token(FRAC, b'Frac ')
 
-            if self.current_char == '\xb6':
+            if self.current_char == b'\xc1':
                 self.advance()
-                return Token(FRAC, 'Frac ')
+                return Token(RANDNUM, b'Ran# ')
 
-            if self.current_char == '\xc1':
+            if self.current_char == b'\x7f' and self.peek() == b'\x40':
                 self.advance()
-                return Token(RANDNUM, 'Ran# ')
+                self.advance()
+                return Token(MAT, b'Mat ')
 
-            if self.current_char == '\x7f' and self.peek() == '\x40':
+            if self.current_char == b'\x7f' and self.peek() == b'\x46':
                 self.advance()
                 self.advance()
-                return Token(MAT, 'Mat ')
+                return Token(DIM, b'Dim')
 
-            if self.current_char == '\x7f' and self.peek() == '\x46':
+            if self.current_char == b'\x7f' and self.peek() == b'\x8f':
                 self.advance()
                 self.advance()
-                return Token(DIM, 'Dim')
+                return Token(GETKEY, b'Getkey')
 
-            if self.current_char == '\x7f' and self.peek() == '\x8f':
+            if self.current_char == b'\x7f' and self.peek() == b'\xb0':
                 self.advance()
                 self.advance()
-                return Token(GETKEY, 'Getkey')
+                return Token(AND, b' And ')
 
-            if self.current_char == '\x7f' and self.peek() == '\xb0':
+            if self.current_char == b'\x7f' and self.peek() == b'\xb1':
                 self.advance()
                 self.advance()
-                return Token(AND, ' And ')
+                return Token(OR, b' Or ')
 
-            if self.current_char == '\x7f' and self.peek() == '\xb1':
+            if self.current_char == b'\xf7' and self.peek() == b'\x00':
                 self.advance()
                 self.advance()
-                return Token(OR, ' Or ')
+                return Token(IF, b'If ')
 
-            if self.current_char == '\xf7' and self.peek() == '\x00':
+            if self.current_char == b'\xf7' and self.peek() == b'\x01':
                 self.advance()
                 self.advance()
-                return Token(IF, 'If ')
+                return Token(THEN, b'Then ')
 
-            if self.current_char == '\xf7' and self.peek() == '\x01':
+            if self.current_char == b'\xf7' and self.peek() == b'\x02':
                 self.advance()
                 self.advance()
-                return Token(THEN, 'Then ')
+                return Token(ELSE, b'Else')
 
-            if self.current_char == '\xf7' and self.peek() == '\x02':
+            if self.current_char == b'\xf7' and self.peek() == b'\x03':
                 self.advance()
                 self.advance()
-                return Token(ELSE, 'Else')
+                return Token(IFEND, b'IfEnd')
 
-            if self.current_char == '\xf7' and self.peek() == '\x03':
+            if self.current_char == b'\xf7' and self.peek() == b'\x04':
                 self.advance()
                 self.advance()
-                return Token(IFEND, 'IfEnd')
+                return Token(FOR, b'For ')
 
-            if self.current_char == '\xf7' and self.peek() == '\x04':
+            if self.current_char == b'\xf7' and self.peek() == b'\x05':
                 self.advance()
                 self.advance()
-                return Token(FOR, 'For ')
+                return Token(TO, b'To ')
 
-            if self.current_char == '\xf7' and self.peek() == '\x05':
+            if self.current_char == b'\xf7' and self.peek() == b'\x06':
                 self.advance()
                 self.advance()
-                return Token(TO, 'To ')
+                return Token(STEP, b'Step ')
 
-            if self.current_char == '\xf7' and self.peek() == '\x06':
+            if self.current_char == b'\xf7' and self.peek() == b'\x07':
                 self.advance()
                 self.advance()
-                return Token(STEP, 'Step ')
+                return Token(NEXT, b'Next')
 
-            if self.current_char == '\xf7' and self.peek() == '\x07':
+            if self.current_char == b'\xf7' and self.peek() == b'\x08':
                 self.advance()
                 self.advance()
-                return Token(NEXT, 'Next')
+                return Token(WHILE, b'While ')
 
-            if self.current_char == '\xf7' and self.peek() == '\x08':
+            if self.current_char == b'\xf7' and self.peek() == b'\x09':
                 self.advance()
                 self.advance()
-                return Token(WHILE, 'While ')
+                return Token(WHILEEND, b'WhileEnd')
 
-            if self.current_char == '\xf7' and self.peek() == '\x09':
+            if self.current_char == b'\xf7' and self.peek() == b'\x0a':
                 self.advance()
                 self.advance()
-                return Token(WHILEEND, 'WhileEnd')
+                return Token(DO, b'Do')
 
-            if self.current_char == '\xf7' and self.peek() == '\x0a':
+            if self.current_char == b'\xf7' and self.peek() == b'\x0b':
                 self.advance()
                 self.advance()
-                return Token(DO, 'Do')
+                return Token(LPWHILE, b'LpWhile ')
 
-            if self.current_char == '\xf7' and self.peek() == '\x0b':
+            if self.current_char == b'\xf7' and self.peek() == b'\x0c':
                 self.advance()
                 self.advance()
-                return Token(LPWHILE, 'LpWhile ')
+                return Token(RETURN, b'Return')
 
-            if self.current_char == '\xf7' and self.peek() == '\x0c':
+            if self.current_char == b'\xf7' and self.peek() == b'\x0d':
                 self.advance()
                 self.advance()
-                return Token(RETURN, 'Return')
+                return Token(BREAK, b'Break')
 
-            if self.current_char == '\xf7' and self.peek() == '\x0d':
+            if self.current_char == b'\xf7' and self.peek() == b'\x0e':
                 self.advance()
                 self.advance()
-                return Token(BREAK, 'Break')
+                return Token(STOP, b'Stop')
 
-            if self.current_char == '\xf7' and self.peek() == '\x0e':
+            if self.current_char == b'\xf7' and self.peek() == b'\x10':
                 self.advance()
                 self.advance()
-                return Token(STOP, 'Stop')
+                return Token(LOCATE, b'Locate ')
 
-            if self.current_char == '\xf7' and self.peek() == '\x10':
+            if self.current_char == b'\xf7' and self.peek() == b'\x18':
                 self.advance()
                 self.advance()
-                return Token(LOCATE, 'Locate ')
+                return Token(CLRTEXT, b'ClrText')
 
-            if self.current_char == '\xf7' and self.peek() == '\x18':
+            if self.current_char == b'\xf7' and self.peek() == b'\x93':
                 self.advance()
                 self.advance()
-                return Token(CLRTEXT, 'ClrText')
+                return Token(STOPICT, b'StoPict ')
 
-            if self.current_char == '\xf7' and self.peek() == '\x93':
+            if self.current_char == b'\xf7' and self.peek() == b'\x94':
                 self.advance()
                 self.advance()
-                return Token(STOPICT, 'StoPict ')
+                return Token(RCLPICT, b'RclPict ')
 
-            if self.current_char == '\xf7' and self.peek() == '\x94':
+            if self.current_char == b'\xf7' and self.peek() == b'\xa4':
                 self.advance()
                 self.advance()
-                return Token(RCLPICT, 'RclPict ')
+                return Token(HORIZONTAL, b'Horizontal ')
 
-            if self.current_char == '\xf7' and self.peek() == '\xa4':
+            if self.current_char == b'\xf7' and self.peek() == b'\xa5':
                 self.advance()
                 self.advance()
-                return Token(HORIZONTAL, 'Horizontal ')
+                return Token(TEXT, b'Text ')
 
-            if self.current_char == '\xf7' and self.peek() == '\xa5':
+            if self.current_char == b'\xf7' and self.peek() == b'\xa6':
                 self.advance()
                 self.advance()
-                return Token(TEXT, 'Text ')
+                return Token(CIRCLE, b'Circle ')
 
-            if self.current_char == '\xf7' and self.peek() == '\xa6':
+            if self.current_char == b'\xf7' and self.peek() == b'\xa7':
                 self.advance()
                 self.advance()
-                return Token(CIRCLE, 'Circle ')
+                return Token(FLINE, b'F-Line ')
 
-            if self.current_char == '\xf7' and self.peek() == '\xa7':
+            if self.current_char == b'\xf7' and self.peek() == b'\xa8':
                 self.advance()
                 self.advance()
-                return Token(FLINE, 'F-Line ')
+                return Token(PLOTON, b'PlotOn ')
 
-            if self.current_char == '\xf7' and self.peek() == '\xa8':
+            if self.current_char == b'\xf7' and self.peek() == b'\xab':
                 self.advance()
                 self.advance()
-                return Token(PLOTON, 'PlotOn ')
+                return Token(PXLON, b'PxlOn ')
 
-            if self.current_char == '\xf7' and self.peek() == '\xab':
+            if self.current_char == b'\xf7' and self.peek() == b'\xac':
                 self.advance()
                 self.advance()
-                return Token(PXLON, 'PxlOn ')
+                return Token(PXLOFF, b'PxlOff ')
 
-            if self.current_char == '\xf7' and self.peek() == '\xac':
+            if self.current_char == b'\xf7' and self.peek() == b'\xad':
                 self.advance()
                 self.advance()
-                return Token(PXLOFF, 'PxlOff ')
+                return Token(PXLCHG, b'PxlChg ')
 
-            if self.current_char == '\xf7' and self.peek() == '\xad':
+            if self.current_char == b'\xf7' and self.peek() == b'\xaf':
                 self.advance()
                 self.advance()
-                return Token(PXLCHG, 'PxlChg ')
+                return Token(PXLTEST, b'PxlTest(')
 
-            if self.current_char == '\xf7' and self.peek() == '\xaf':
+            if self.current_char == b'\xf7' and self.peek() == b'\xd3':
                 self.advance()
                 self.advance()
-                return Token(PXLTEST, 'PxlTest(')
+                return Token(COORDOFF, b'CoordOff')
 
-            if self.current_char == '\xf7' and self.peek() == '\xd3':
+            if self.current_char == b'\xf7' and self.peek() == b'\x7a':
                 self.advance()
                 self.advance()
-                return Token(COORDOFF, 'CoordOff')
+                return Token(GRIDOFF, b'GridOff')
 
-            if self.current_char == '\xf7' and self.peek() == '\x7a':
+            if self.current_char == b'\xf7' and self.peek() == b'\xd2':
                 self.advance()
                 self.advance()
-                return Token(GRIDOFF, 'GridOff')
+                return Token(AXESOFF, b'AxesOff')
 
-            if self.current_char == '\xf7' and self.peek() == '\xd2':
+            if self.current_char == b'\xf7' and self.peek() == b'\xd4':
                 self.advance()
                 self.advance()
-                return Token(AXESOFF, 'AxesOff')
+                return Token(LABELOFF, b'LabelOff')
 
-            if self.current_char == '\xf7' and self.peek() == '\xd4':
+            if self.current_char == b',':
                 self.advance()
-                self.advance()
-                return Token(LABELOFF, 'LabelOff')
+                return Token(COMMA, b',')
 
-            if self.current_char == ',':
+            if self.current_char == b':':
                 self.advance()
-                return Token(COMMA, ',')
+                return Token(SEMI, b':')
 
-            if self.current_char == ':':
+            if self.current_char == b'=':
                 self.advance()
-                return Token(SEMI, ':')
+                return Token(EQ, b'==')
 
-            if self.current_char == '=':
+            if self.current_char == b'\x10':
                 self.advance()
-                return Token(EQ, '==')
+                return Token(LTE, b'<=')
 
-            if self.current_char == '\x10':
+            if self.current_char == b'\x12':
                 self.advance()
-                return Token(LTE, '<=')
+                return Token(GTE, b'>=')
 
-            if self.current_char == '\x12':
+            if self.current_char == b'\x11':
                 self.advance()
-                return Token(GTE, '>=')
+                return Token(NEQ, b'!=')
 
-            if self.current_char == '\x11':
+            if self.current_char == b'\x3c':
                 self.advance()
-                return Token(NEQ, '!=')
+                return Token(LT, b'<')
 
-            if self.current_char == '\x3c':
+            if self.current_char == b'\x3e':
                 self.advance()
-                return Token(LT, '<')
+                return Token(GT, b'>')
 
-            if self.current_char == '\x3e':
+            if self.current_char == b'\x13':
                 self.advance()
-                return Token(GT, '>')
+                return Token(INLINEIF, b'=>')
 
-            if self.current_char == '\x13':
+            if self.current_char == b'\x0c':
                 self.advance()
-                return Token(INLINEIF, '=>')
+                return Token(DISP, b'DISP')
 
-            if self.current_char == '\x0c':
+            if self.current_char == b'\x0d':
                 self.advance()
-                return Token(DISP, 'DISP')
+                return Token(SEMI, b'EOL')
 
-            if self.current_char == '\x0d':
+            if self.current_char == b'?':
                 self.advance()
-                return Token(SEMI, 'EOL')
+                return Token(PROMPT, b'?')
 
-            if self.current_char == '?':
+            if self.current_char == b'\x0e':
                 self.advance()
-                return Token(PROMPT, '?')
-
-            if self.current_char == '\x0e':
-                self.advance()
-                return Token(ASSIGN, '->')
+                return Token(ASSIGN, b'->')
 
             if is_variable(self.current_char):
                 token = Token(VARIABLE, self.current_char)
@@ -387,67 +392,67 @@ class Lexer(object):
             if is_numeric(self.current_char):
                 return Token(INTEGER, self.numeric())
 
-            if self.current_char == '"':
+            if self.current_char == b'"':
                 return Token(STRING, self.string())
 
-            if self.current_char == '\'':
+            if self.current_char == b'\'':
                 return Token(COMMENT, self.comment())
 
-            if self.current_char == '\x89':
+            if self.current_char == b'\x89':
                 self.advance()
-                return Token(PLUS, '+')
+                return Token(PLUS, b'+')
 
-            if self.current_char in ('\x99', '\x87'):
+            if self.current_char in (b'\x99', b'\x87'):
                 self.advance()
-                return Token(MINUS, '-')
+                return Token(MINUS, b'-')
 
-            if self.current_char == '\xa9':
+            if self.current_char == b'\xa9':
                 self.advance()
-                return Token(MUL, 'x')
+                return Token(MUL, b'x')
 
-            if self.current_char == '\xb9':
+            if self.current_char == b'\xb9':
                 self.advance()
-                return Token(DIV, '/')
+                return Token(DIV, b'/')
 
-            if self.current_char == '\xa6':
+            if self.current_char == b'\xa6':
                 self.advance()
-                return Token(INTG, 'Int ')
+                return Token(INTG, b'Int ')
 
-            if self.current_char == '\xa8':
+            if self.current_char == b'\xa8':
                 self.advance()
-                return Token(POWER, '^')
+                return Token(POWER, b'^')
 
-            if self.current_char == '\x8b':
+            if self.current_char == b'\x8b':
                 self.advance()
-                return Token(SQUARED, '^2')
+                return Token(SQUARED, b'^2')
 
-            if self.current_char == '(':
+            if self.current_char == b'(':
                 self.advance()
-                return Token(LPAREN, '(')
+                return Token(LPAREN, b'(')
 
-            if self.current_char == ')':
+            if self.current_char == b')':
                 self.advance()
-                return Token(RPAREN, ')')
+                return Token(RPAREN, b')')
 
-            if self.current_char == '{':
+            if self.current_char == b'{':
                 self.advance()
-                return Token(LBRACE, '{')
+                return Token(LBRACE, b'{')
 
-            if self.current_char == '}':
+            if self.current_char == b'}':
                 self.advance()
-                return Token(RBRACE, '}')
+                return Token(RBRACE, b'}')
 
-            if self.current_char == '[':
+            if self.current_char == b'[':
                 self.advance()
-                return Token(LBRACKET, '[')
+                return Token(LBRACKET, b'[')
 
-            if self.current_char == ']':
+            if self.current_char == b']':
                 self.advance()
-                return Token(RBRACKET, ']')
+                return Token(RBRACKET, b']')
 
-            if self.current_char == '~':
+            if self.current_char == b'~':
                 self.advance()
-                return Token(VARIABLERANGE, '~')
+                return Token(VARIABLERANGE, b'~')
 
             self.error()
 
@@ -1155,10 +1160,10 @@ class Parser(object):
         while True:
             token = self.current_token
             if token.type in (RANDNUM, PROMPT, GETKEY, PXLTEST, INTG, FRAC, LPAREN):
-                token = Token(MUL, '*')
+                token = Token(MUL, b'*')
                 node = BinOp(left=node, op=token, right=self.factor())
             elif self.try_parse(self.factor_ref):
-                token = Token(MUL, '*')
+                token = Token(MUL, b'*')
                 node = BinOp(left=node, op=token, right=self.factor_ref())
             else:
                 break
@@ -1235,7 +1240,7 @@ class Parser(object):
             self.eat(VARIABLERANGE)
             token = self.current_token
             upper = self.factor_ref()
-            if token.type != VARIABLE or ord(node.value) > ord(upper.value):
+            if token.type != VARIABLE or node.value[0] > upper.value[0]:
                 self.error()
             node = VariableRange(node, upper)
         return node
