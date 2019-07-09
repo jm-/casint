@@ -1,5 +1,6 @@
 import os
 import sys
+import traceback
 
 try:
     import sdl2
@@ -40,7 +41,6 @@ def main(filepath):
         except InterpreterQuitException:
             return 0
         except:
-            import sys, traceback
             e = sys.exc_info()
             trace = '' if e[0] is None else ''.join(traceback.format_exception(*e))
             print(trace)
