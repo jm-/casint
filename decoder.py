@@ -21,7 +21,7 @@ class CasioProgram(object):
     def __str__(self):
         isParsed = hasattr(self, 'tree') and self.tree
         status = '(valid)' if isParsed else '(invalid)'
-        return '%-8s    : %5d %s' % (self.name, self.size, status)
+        return f'{self.name:-8s}    : {self.size:5d} {status}'
 
     def __repr__(self):
         return self.__str__()
