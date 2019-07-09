@@ -7,7 +7,7 @@ from common import *
 from interpreter import Var, VariableRange, MemoryIndex, Label
 from graphics import setpixel, pxltest, fline, text, locate
 
-SDL_DELAY_MILLIS = 25
+SDL_DELAY_MILLIS = 16
 
 
 class SubroutineReturnException(Exception):
@@ -35,7 +35,7 @@ class GotoException(Exception):
 class NodeVisitor(object):
     def _visit(self, node):
         method_name = '_visit_' + type(node).__name__
-        #print 'DBG: invoking %s' % (method_name,)
+        #print(f'DBG: invoking {method_name}')
         visitor = getattr(self, method_name, self._generic_visit)
         return visitor(node)
 
@@ -62,7 +62,10 @@ class CasioInterpreter(NodeVisitor):
 
     def _initialize_vars(self):
         # initialize all vars to 0
-        self.vars = dict((v, 0) for v in ALPHA_MEM_CHARS)
+        self.vars = dict()
+        for i in range(len(ALPHA_MEM_CHARS)):
+            v = ALPHA_MEM_CHARS[i:i+1]
+            self.vars[v] = 0
 
     def _initialize_mats(self):
         self.mats = dict()
@@ -74,7 +77,7 @@ class CasioInterpreter(NodeVisitor):
         sdl2.SDL_Init(sdl2.SDL_INIT_VIDEO)
 
         self.window = sdl2.SDL_CreateWindow(
-            'CASINT: CASIO Basic Interpreter',
+            b'CASINT: CASIO Basic Interpreter',
             sdl2.SDL_WINDOWPOS_CENTERED, sdl2.SDL_WINDOWPOS_CENTERED,
             512, 256, sdl2.SDL_WINDOW_SHOWN)
 
@@ -105,8 +108,8 @@ class CasioInterpreter(NodeVisitor):
         self._clear_screen()
         self._render_end()
 
-        self.font_graph = self._load_texture('img/font_graph.bmp')
-        self.font_text = self._load_texture('img/font_text.bmp')
+        self.font_graph = self._load_texture(b'img/font_graph.bmp')
+        self.font_text = self._load_texture(b'img/font_text.bmp')
 
     def _initialize_text(self):
         self.text_line = 0
@@ -140,7 +143,7 @@ class CasioInterpreter(NodeVisitor):
         sdl2.SDL_RenderPresent(self.renderer)
 
     def _set_window_title(self, name):
-        sdl2.SDL_SetWindowTitle(self.window, name + ' - CASINT: CASIO Basic Interpreter')
+        sdl2.SDL_SetWindowTitle(self.window, name + b' - CASINT: CASIO Basic Interpreter')
 
     def _handle_events(self, delay=False):
         self._refresh_screen()
@@ -193,12 +196,12 @@ class CasioInterpreter(NodeVisitor):
 
     def _run_prog(self, name):
         program = self.programs.get(name)
-        #print 'DBG: entering subroutine: %r' % (name,)
+        print(f'DBG: entering subroutine: {name}')
         try:
             self._visit(program.tree)
         except SubroutineReturnException:
             pass
-        #print 'DBG: returned from subroutine: %r' % (name,)
+        print(f'DBG: returned from subroutine: {name}')
 
     def _save_pic(self, num):
         pic = self.pics.get(num)
@@ -244,17 +247,17 @@ class CasioInterpreter(NodeVisitor):
             self.vars[node.value] = value
 
         elif type(node) is VariableRange:
-            l = ord(node.lower.value)
-            u = ord(node.upper.value)
+            l = node.lower.value[0]
+            u = node.upper.value[0]
             while l <= u:
-                self.vars[chr(l)] = value
+                self.vars[bytes((l,))] = value
                 l += 1
 
         elif type(node) is MemoryIndex:
             if node.left.op.type == MAT:
                 x = self._visit(node.right[0])
                 y = self._visit(node.right[1])
-                self.mats[node.left.value][x-1][y-1] = value
+                self.mats[node.left.value][int(x-1)][int(y-1)] = value
             else:
                 raise Exception('Unknown memory index assignment: {}'.format(node.left.op.type))
 
@@ -269,7 +272,7 @@ class CasioInterpreter(NodeVisitor):
             if node.left.op.type == MAT:
                 x = self._visit(node.right[0])
                 y = self._visit(node.right[1])
-                return self.mats[node.left.value][x-1][y-1]
+                return self.mats[node.left.value][int(x-1)][int(y-1)]
             else:
                 raise Exception('Unknown memory index retrieval: {}'.format(node.left.op.type))
 
@@ -331,7 +334,7 @@ class CasioInterpreter(NodeVisitor):
             y1 = self._visit(node.arg4)
             self._render_begin(self.texture_graph)
             self._set_color(True)
-            fline(self.renderer, x0, y0, x1, y1)
+            fline(self.renderer, int(x0), int(y0), int(x1), int(y1))
             self._render_end()
             self._handle_events(delay=True)
         else:
@@ -342,22 +345,26 @@ class CasioInterpreter(NodeVisitor):
             y = self._visit(node.arg1)
             x = self._visit(node.arg2)
             s = self._visit(node.arg3)
-            if type(s) is not str:
-                s = str(s)
+            if type(s) is not bytes:
+                if type(s) is float and s == int(s):
+                    # don't print decimals
+                    s = int(s)
+                s = bytes(str(s), 'ascii')
             self._render_begin(self.texture_graph)
-            #print 'text:', repr(s)
-            text(self.renderer, self.font_graph, x, y, s)
+            text(self.renderer, self.font_graph, int(x), int(y), s)
             self._render_end()
             self._handle_events(delay=True)
         elif node.op.type == LOCATE:
             x = self._visit(node.arg1)
             y = self._visit(node.arg2)
             s = self._visit(node.arg3)
-            if type(s) is not str:
-                s = str(s)
+            if type(s) is not bytes:
+                if type(s) is float and s == int(s):
+                    # don't print decimals
+                    s = int(s)
+                s = bytes(str(s), 'ascii')
             self._render_begin(self.texture_text)
-            #print 'text:', repr(s)
-            locate(self.renderer, self.font_text, x, y, s)
+            locate(self.renderer, self.font_text, int(x), int(y), s)
             self._render_end()
             self._handle_events(delay=True)
         else:
@@ -369,7 +376,7 @@ class CasioInterpreter(NodeVisitor):
             x = self._visit(node.arg2)
             self._render_begin(self.texture_graph)
             self._set_color(True)
-            setpixel(self.renderer, x, y)
+            setpixel(self.renderer, int(x), int(y))
             self._render_end()
             self._handle_events(delay=True)
         elif node.op.type == PXLOFF:
@@ -377,7 +384,7 @@ class CasioInterpreter(NodeVisitor):
             x = self._visit(node.arg2)
             self._render_begin(self.texture_graph)
             self._set_color(False)
-            setpixel(self.renderer, x, y)
+            setpixel(self.renderer, int(x), int(y))
             self._render_end()
             self._handle_events(delay=True)
         else:
@@ -388,7 +395,7 @@ class CasioInterpreter(NodeVisitor):
             y = self._visit(node.arg1)
             x = self._visit(node.arg2)
             self._render_begin(self.texture_graph)
-            is_lit = pxltest(self.renderer, x, y)
+            is_lit = pxltest(self.renderer, int(x), int(y))
             self._render_end()
             return 1 if is_lit else 0
         else:
@@ -399,17 +406,17 @@ class CasioInterpreter(NodeVisitor):
             y = self._visit(node.arg1)
             self._render_begin(self.texture_graph)
             self._set_color(True)
-            fline(self.renderer, 1, y, 127, y)
+            fline(self.renderer, 1, int(y), 127, int(y))
             self._render_end()
         elif node.op.type == PROG:
             name = self._visit(node.arg1)
             self._run_prog(name)
         elif node.op.type == STOPICT:
             num = self._visit(node.arg1)
-            self._save_pic(num)
+            self._save_pic(int(num))
         elif node.op.type == RCLPICT:
             num = self._visit(node.arg1)
-            self._load_pic(num)
+            self._load_pic(int(num))
         elif node.op.type == ISZ:
             # NB: this is an incomplete impl!
             self._assign(self._retrieve(node.arg1) + 1, node.arg1)
@@ -426,10 +433,10 @@ class CasioInterpreter(NodeVisitor):
     def _visit_UnaryFunc(self, node):
         if node.op.type == INTG:
             value = self._visit(node.arg1)
-            return int(value)
+            return float(int(value))
         elif node.op.type == FRAC:
             value = self._visit(node.arg1)
-            return value - int(value)
+            return float(value - int(value))
         else:
             raise Exception('Unknown UnaryFunc op type: {}'.format(node.op.type))
 
@@ -480,7 +487,7 @@ class CasioInterpreter(NodeVisitor):
         x = self._visit(node.left[0])
         y = self._visit(node.left[1])
         if node.right.op.type == MAT:
-            self.mats[node.right.value] = [[0 for j in xrange(y)] for i in xrange(x)]
+            self.mats[node.right.value] = [[0 for j in range(int(y))] for i in range(int(x))]
         else:
             raise Exception('Unknown memory index initialization: {}'.format(node.right.op.type))
 
@@ -545,16 +552,24 @@ class CasioInterpreter(NodeVisitor):
 
         if currentvalue < endvalue:
             if stepvalue <= 0:
-                print 'WRN: ForTo loop is invalid! start=%s step=%s end=%s' % (
-                    currentvalue, stepvalue, endvalue)
+                print(
+                    f'WRN: ForTo loop is invalid!'
+                    f' start={currentvalue}'
+                    f' step={stepvalue}'
+                    f' end={endvalue}'
+                )
                 check_fn = lambda x: False
             else:
                 check_fn = lambda x: x <= endvalue
 
         elif currentvalue > endvalue:
             if stepvalue >= 0:
-                print 'WRN: ForTo loop is invalid! start=%s step=%s end=%s' % (
-                    currentvalue, stepvalue, endvalue)
+                print(
+                    f'WRN: ForTo loop is invalid!'
+                    f' start={currentvalue}'
+                    f' step={stepvalue}'
+                    f' end={endvalue}'
+                )
                 check_fn = lambda x: False
             else:
                 check_fn = lambda x: x >= endvalue

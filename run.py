@@ -14,9 +14,9 @@ from decoder import G1mFile, CasioProgram
 from machine import CasioInterpreter, InterpreterQuitException
 
 def main(filepath):
-    g1mfile = G1mFile(filepath, debug=False)
+    g1mfile = G1mFile(filepath, debug=True)
 
-    print 'Processing G1M file...'
+    print(f'Processing G1M file...')
     programs = g1mfile.load()
     num_programs = len(programs)
 
@@ -25,12 +25,12 @@ def main(filepath):
             while True:
                 # TODO: replace with choose_program method
                 for i in range(num_programs):
-                    print '%2d %s' % (i, programs[i])
+                    print(f'{i:2d} {programs[i]}')
 
                 selection = -1
                 while not (0 <= selection < num_programs):
                     try:
-                        selection = input('choose: ')
+                        selection = int(input('choose: '))
                     except KeyboardInterrupt:
                         return 0
                     except:
@@ -43,8 +43,9 @@ def main(filepath):
             import sys, traceback
             e = sys.exc_info()
             trace = '' if e[0] is None else ''.join(traceback.format_exception(*e))
-            print trace
-            #print interpreter.vars, interpreter.mats
+            print(trace)
+            print(interpreter.vars)
+            print(interpreter.mats)
             return 2
 
         # wait for user to close program
@@ -57,5 +58,5 @@ if __name__ == '__main__':
     if len(sys.argv) == 2:
         sys.exit(main(sys.argv[1]))
     else:
-        print 'Usage: %s <file.g1m>' % (sys.argv[0],)
+        print(f'Usage: {sys.argv[0]} <file.g1m>')
         sys.exit(1)

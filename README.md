@@ -8,7 +8,7 @@ A simple interpreter for CASIO Basic using G1M files as input. Uses SDL for grap
 ## Installing
 
 Requirements:
-* Python 2
+* Python 3
 * SDL2 installation
 
 1. Clone the repo
