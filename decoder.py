@@ -33,8 +33,8 @@ class G1mFile(object):
         self.debug = True
         # table for G1M character set
         self.char_encoding_table = bytes.maketrans(
-            b'\x99',
-            b'\x7e'
+            b'\x89\x99',
+            b'\x2b\x7e'
         )
 
     def _read_header(self, fp):
