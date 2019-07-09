@@ -172,7 +172,7 @@ class CasioInterpreter(NodeVisitor):
         sdl2.SDL_DestroyTexture(self.font_text)
         sdl2.SDL_DestroyTexture(self.font_graph)
         # clean up stored pics
-        for pic in self.pics.values():
+        for pic in list(self.pics.values()):
             sdl2.SDL_DestroyTexture(pic)
         sdl2.SDL_DestroyWindow(self.window)
         sdl2.SDL_DestroyRenderer(self.renderer)
