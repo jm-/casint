@@ -30,7 +30,12 @@ class CasioProgram(object):
 class G1mFile(object):
     def __init__(self, filepath, debug=False):
         self.filepath = filepath
-        self.debug = debug
+        self.debug = True
+        # table for G1M character set
+        self.char_encoding_table = bytes.maketrans(
+            b'\x99',
+            b'\x7e'
+        )
 
     def _read_header(self, fp):
         headerBytes = fp.read(32)
@@ -92,6 +97,9 @@ class G1mFile(object):
             itemLength,
             reservedSequence2
         ) = struct.unpack('>8s8sBI3s', itemHeader2)
+
+        # translate the title
+        itemTitle = itemTitle.translate(self.char_encoding_table)
 
         if self.debug:
             print(f'memLocationName={memLocationName}')
