@@ -44,8 +44,8 @@ def main(filepath):
             e = sys.exc_info()
             trace = '' if e[0] is None else ''.join(traceback.format_exception(*e))
             print(trace)
-            print(interpreter.vars)
-            print(interpreter.mats)
+            #print((interpreter.vars))
+            #print((interpreter.mats))
             return 2
 
         # wait for user to close program
