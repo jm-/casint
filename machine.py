@@ -196,12 +196,12 @@ class CasioInterpreter(NodeVisitor):
 
     def _run_prog(self, name):
         program = self.programs.get(name)
-        print(f'DBG: entering subroutine: {name}')
+        #print(f'DBG: entering subroutine: {name}')
         try:
             self._visit(program.tree)
         except SubroutineReturnException:
             pass
-        print(f'DBG: returned from subroutine: {name}')
+        #print(f'DBG: returned from subroutine: {name}')
 
     def _save_pic(self, num):
         pic = self.pics.get(num)
