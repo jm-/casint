@@ -15,7 +15,7 @@ from decoder import G1mFile, CasioProgram
 from machine import CasioInterpreter, InterpreterQuitException
 
 def main(filepath):
-    g1mfile = G1mFile(filepath, debug=True)
+    g1mfile = G1mFile(filepath, debug=False)
 
     print(f'Processing G1M file...')
     programs = g1mfile.load()
