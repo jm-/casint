@@ -14,6 +14,7 @@ except ImportError:
 from decoder import G1mFile, CasioProgram
 from machine import CasioInterpreter, InterpreterQuitException
 
+
 def main(filepath):
     g1mfile = G1mFile(filepath, debug=False)
 
@@ -52,6 +53,7 @@ def main(filepath):
         #interpreter.idle()
 
     return 0
+
 
 if __name__ == '__main__':
 

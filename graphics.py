@@ -1,6 +1,7 @@
 import ctypes
 import sdl2
 
+
 def setpixel(renderer, x, y):
 	sdl2.SDL_RenderDrawPoint(renderer, x, y)
 

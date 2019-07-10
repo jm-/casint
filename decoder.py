@@ -4,15 +4,17 @@ import bitstring
 
 from interpreter import Lexer, Parser
 
+
 class CasioProgram(object):
     def __init__(self, name, text):
         self.name = name.rstrip(b'\x00')
         self.size = len(text)
         # first 10 bytes are reserved
         lexer = Lexer(text[10:])
-        self.parser = Parser(lexer)
+        parser = Parser(lexer)
+        self._parse(parser)
 
-    def parse(self):
+    def _parse(self, parser):
         try:
             self.tree = self.parser.parse()
         except:
@@ -116,7 +118,6 @@ class G1mFile(object):
         assert itemTypeIdentifier == 0x01
 
         program = CasioProgram(itemTitle, itemData)
-        program.parse()
         return program
 
     def load(self):
