@@ -124,3 +124,9 @@ SDL_CASIO_KEYMAP = {
 }
 
 DEFAULT_CASIO_GETKEY = 0
+
+# table for G1M character set
+CHARACTER_ENCODING_TABLE = bytes.maketrans(
+	b'\x89\x99',
+	b'\x2b\x7e'
+)

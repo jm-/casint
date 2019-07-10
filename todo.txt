@@ -1,0 +1,2 @@
+* handle sdl events when idle (choosing program)
+* write tool to export CasioProgram to editable file
