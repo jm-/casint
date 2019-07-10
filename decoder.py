@@ -16,7 +16,7 @@ class CasioProgram(object):
 
     def _parse(self, parser):
         try:
-            self.tree = self.parser.parse()
+            self.tree = parser.parse()
         except:
             self.tree = None
 
