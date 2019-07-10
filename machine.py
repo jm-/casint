@@ -8,6 +8,7 @@ from interpreter import Var, VariableRange, MemoryIndex, Label
 from graphics import setpixel, pxltest, fline, text, locate
 
 SDL_DELAY_MILLIS = 16
+ASPECT_RATIO = 2.0
 
 
 class SubroutineReturnException(Exception):
@@ -79,7 +80,7 @@ class CasioMachine(NodeVisitor):
         self.window = sdl2.SDL_CreateWindow(
             b'CASINT: CASIO Basic Interpreter',
             sdl2.SDL_WINDOWPOS_CENTERED, sdl2.SDL_WINDOWPOS_CENTERED,
-            512, 256, sdl2.SDL_WINDOW_SHOWN)
+            512, 256, sdl2.SDL_WINDOW_SHOWN | sdl2.SDL_WINDOW_RESIZABLE)
 
         self.renderer = sdl2.SDL_CreateRenderer(
             self.window, -1, sdl2.SDL_RENDERER_ACCELERATED)
@@ -145,7 +146,19 @@ class CasioMachine(NodeVisitor):
     def _set_window_title(self, name):
         sdl2.SDL_SetWindowTitle(self.window, name + b' - CASINT: CASIO Basic Interpreter')
 
-    def _handle_events(self, pump=True, delay=False):
+    def _handle_windowevents(self, event):
+        if event.window.event == sdl2.SDL_WINDOWEVENT_RESIZED:
+            width = event.window.data1
+            height = event.window.data2
+            aspectRatio = float(width) / float(height)
+            if aspectRatio != ASPECT_RATIO:
+                if aspectRatio > ASPECT_RATIO:
+                    height = int(float(width) / ASPECT_RATIO)
+                else:
+                    width = int(ASPECT_RATIO * float(height))
+                sdl2.SDL_SetWindowSize(self.window, width, height)
+
+    def _handle_events(self, pump=True, delay=True):
         self._refresh_screen()
         if pump:
             event = sdl2.SDL_Event()
@@ -153,6 +166,8 @@ class CasioMachine(NodeVisitor):
             while sdl2.SDL_PollEvent(ctypes.byref(event)) != 0:
                 if event.type == sdl2.SDL_QUIT:
                     raise InterpreterQuitException()
+                elif event.type == sdl2.SDL_WINDOWEVENT:
+                    self._handle_windowevents(event)
                 elif event.type == sdl2.SDL_KEYDOWN:
                     self.key = event.key.keysym.sym
                     setkey = True
@@ -185,9 +200,14 @@ class CasioMachine(NodeVisitor):
         except ProgramStopException:
             pass
 
+    def wait_for_any_key(self):
+        self.key = None
+        while self.key is None:
+            self._handle_events()
+
     def idle(self):
         while True:
-            self._handle_events(delay=True)
+            self._handle_events()
 
     # =========================================================================
     # Node processing starts here!
@@ -283,7 +303,7 @@ class CasioMachine(NodeVisitor):
         return bool(value)
 
     def _getkey(self):
-        self._handle_events(delay=True)
+        self._handle_events()
         casio_key = SDL_CASIO_KEYMAP.get(self.key, DEFAULT_CASIO_GETKEY)
         return casio_key
 
