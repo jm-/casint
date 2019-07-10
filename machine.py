@@ -145,20 +145,19 @@ class CasioMachine(NodeVisitor):
     def _set_window_title(self, name):
         sdl2.SDL_SetWindowTitle(self.window, name + b' - CASINT: CASIO Basic Interpreter')
 
-    def _handle_events(self, delay=False):
+    def _handle_events(self, pump=True, delay=False):
         self._refresh_screen()
-        event = sdl2.SDL_Event()
-        setkey = False
-        while sdl2.SDL_PollEvent(ctypes.byref(event)) != 0:
-            if event.type == sdl2.SDL_QUIT:
-                raise InterpreterQuitException()
-            elif event.type == sdl2.SDL_KEYDOWN:
-                self.key = event.key.keysym.sym
-                setkey = True
-
-        if not setkey:
-            self.key = None
-
+        if pump:
+            event = sdl2.SDL_Event()
+            setkey = False
+            while sdl2.SDL_PollEvent(ctypes.byref(event)) != 0:
+                if event.type == sdl2.SDL_QUIT:
+                    raise InterpreterQuitException()
+                elif event.type == sdl2.SDL_KEYDOWN:
+                    self.key = event.key.keysym.sym
+                    setkey = True
+            if not setkey:
+                self.key = None
         if delay:
             sdl2.SDL_Delay(SDL_DELAY_MILLIS)
 
@@ -336,7 +335,7 @@ class CasioMachine(NodeVisitor):
             self._set_color(True)
             fline(self.renderer, int(x0), int(y0), int(x1), int(y1))
             self._render_end()
-            self._handle_events(delay=True)
+            self._handle_events(pump=False)
         else:
             raise Exception('Unknown QuaternaryBuiltin op type: {}'.format(node.op.type))
 
@@ -353,7 +352,7 @@ class CasioMachine(NodeVisitor):
             self._render_begin(self.texture_graph)
             text(self.renderer, self.font_graph, int(x), int(y), s)
             self._render_end()
-            self._handle_events(delay=True)
+            self._handle_events(pump=False)
         elif node.op.type == LOCATE:
             x = self._visit(node.arg1)
             y = self._visit(node.arg2)
@@ -366,7 +365,7 @@ class CasioMachine(NodeVisitor):
             self._render_begin(self.texture_text)
             locate(self.renderer, self.font_text, int(x), int(y), s)
             self._render_end()
-            self._handle_events(delay=True)
+            self._handle_events(pump=False)
         else:
             raise Exception('Unknown TernaryBuiltin op type: {}'.format(node.op.type))
 
@@ -378,7 +377,7 @@ class CasioMachine(NodeVisitor):
             self._set_color(True)
             setpixel(self.renderer, int(x), int(y))
             self._render_end()
-            self._handle_events(delay=True)
+            self._handle_events(pump=False)
         elif node.op.type == PXLOFF:
             y = self._visit(node.arg1)
             x = self._visit(node.arg2)
@@ -386,7 +385,7 @@ class CasioMachine(NodeVisitor):
             self._set_color(False)
             setpixel(self.renderer, int(x), int(y))
             self._render_end()
-            self._handle_events(delay=True)
+            self._handle_events(pump=False)
         else:
             raise Exception('Unknown BinaryBuiltin op type: {}'.format(node.op.type))
 
