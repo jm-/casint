@@ -2,26 +2,34 @@ import struct
 
 import bitstring
 
+from common import CHARACTER_ENCODING_TABLE
 from interpreter import Lexer, Parser
+
 
 class CasioProgram(object):
     def __init__(self, name, text):
-        self.name = name.rstrip(b'\x00')
+        self.name = name
         self.size = len(text)
         # first 10 bytes are reserved
         lexer = Lexer(text[10:])
-        self.parser = Parser(lexer)
+        parser = Parser(lexer)
+        self._parse(parser)
 
-    def parse(self):
+    def _parse(self, parser):
         try:
-            self.tree = self.parser.parse()
+            self.tree = parser.parse()
         except:
             self.tree = None
+
+    def get_printable_name(self):
+        return self.name.translate(CHARACTER_ENCODING_TABLE)
 
     def __str__(self):
         isParsed = hasattr(self, 'tree') and self.tree
         status = '(valid)' if isParsed else '(invalid)'
-        return '%-8s    : %5d %s' % (self.name, self.size, status)
+        # translate the title
+        stringname = self.get_printable_name().decode('ascii')
+        return f'{stringname:8s}  : {self.size:5d} {status}'
 
     def __repr__(self):
         return self.__str__()
@@ -30,12 +38,7 @@ class CasioProgram(object):
 class G1mFile(object):
     def __init__(self, filepath, debug=False):
         self.filepath = filepath
-        self.debug = True
-        # table for G1M character set
-        self.char_encoding_table = bytes.maketrans(
-            b'\x89\x99',
-            b'\x2b\x7e'
-        )
+        self.debug = debug
 
     def _read_header(self, fp):
         headerBytes = fp.read(32)
@@ -98,9 +101,6 @@ class G1mFile(object):
             reservedSequence2
         ) = struct.unpack('>8s8sBI3s', itemHeader2)
 
-        # translate the title
-        itemTitle = itemTitle.translate(self.char_encoding_table)
-
         if self.debug:
             print(f'memLocationName={memLocationName}')
             print(f'itemTitle={itemTitle}')
@@ -114,8 +114,7 @@ class G1mFile(object):
         # make sure the item is a program
         assert itemTypeIdentifier == 0x01
 
-        program = CasioProgram(itemTitle, itemData)
-        program.parse()
+        program = CasioProgram(itemTitle.rstrip(b'\x00'), itemData)
         return program
 
     def load(self):

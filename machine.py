@@ -8,6 +8,7 @@ from interpreter import Var, VariableRange, MemoryIndex, Label
 from graphics import setpixel, pxltest, fline, text, locate
 
 SDL_DELAY_MILLIS = 16
+ASPECT_RATIO = 2.0
 
 
 class SubroutineReturnException(Exception):
@@ -43,7 +44,7 @@ class NodeVisitor(object):
         raise Exception('No _visit_{} method'.format(type(node).__name__))
 
 
-class CasioInterpreter(NodeVisitor):
+class CasioMachine(NodeVisitor):
     def __init__(self, programs):
         self.key = None
 
@@ -79,7 +80,7 @@ class CasioInterpreter(NodeVisitor):
         self.window = sdl2.SDL_CreateWindow(
             b'CASINT: CASIO Basic Interpreter',
             sdl2.SDL_WINDOWPOS_CENTERED, sdl2.SDL_WINDOWPOS_CENTERED,
-            512, 256, sdl2.SDL_WINDOW_SHOWN)
+            512, 256, sdl2.SDL_WINDOW_SHOWN | sdl2.SDL_WINDOW_RESIZABLE)
 
         self.renderer = sdl2.SDL_CreateRenderer(
             self.window, -1, sdl2.SDL_RENDERER_ACCELERATED)
@@ -145,20 +146,33 @@ class CasioInterpreter(NodeVisitor):
     def _set_window_title(self, name):
         sdl2.SDL_SetWindowTitle(self.window, name + b' - CASINT: CASIO Basic Interpreter')
 
-    def _handle_events(self, delay=False):
+    def _handle_windowevents(self, event):
+        if event.window.event == sdl2.SDL_WINDOWEVENT_RESIZED:
+            width = event.window.data1
+            height = event.window.data2
+            aspectRatio = float(width) / float(height)
+            if aspectRatio != ASPECT_RATIO:
+                if aspectRatio > ASPECT_RATIO:
+                    height = int(float(width) / ASPECT_RATIO)
+                else:
+                    width = int(ASPECT_RATIO * float(height))
+                sdl2.SDL_SetWindowSize(self.window, width, height)
+
+    def _handle_events(self, pump=True, delay=True):
         self._refresh_screen()
-        event = sdl2.SDL_Event()
-        setkey = False
-        while sdl2.SDL_PollEvent(ctypes.byref(event)) != 0:
-            if event.type == sdl2.SDL_QUIT:
-                raise InterpreterQuitException()
-            elif event.type == sdl2.SDL_KEYDOWN:
-                self.key = event.key.keysym.sym
-                setkey = True
-
-        if not setkey:
-            self.key = None
-
+        if pump:
+            event = sdl2.SDL_Event()
+            setkey = False
+            while sdl2.SDL_PollEvent(ctypes.byref(event)) != 0:
+                if event.type == sdl2.SDL_QUIT:
+                    raise InterpreterQuitException()
+                elif event.type == sdl2.SDL_WINDOWEVENT:
+                    self._handle_windowevents(event)
+                elif event.type == sdl2.SDL_KEYDOWN:
+                    self.key = event.key.keysym.sym
+                    setkey = True
+            if not setkey:
+                self.key = None
         if delay:
             sdl2.SDL_Delay(SDL_DELAY_MILLIS)
 
@@ -180,15 +194,20 @@ class CasioInterpreter(NodeVisitor):
 
     def run(self, name):
         program = self.programs.get(name)
-        self._set_window_title(name)
+        self._set_window_title(program.get_printable_name())
         try:
             self._visit(program.tree)
         except ProgramStopException:
             pass
 
+    def wait_for_any_key(self):
+        self.key = None
+        while self.key is None:
+            self._handle_events()
+
     def idle(self):
         while True:
-            self._handle_events(delay=True)
+            self._handle_events()
 
     # =========================================================================
     # Node processing starts here!
@@ -284,7 +303,7 @@ class CasioInterpreter(NodeVisitor):
         return bool(value)
 
     def _getkey(self):
-        self._handle_events(delay=True)
+        self._handle_events()
         casio_key = SDL_CASIO_KEYMAP.get(self.key, DEFAULT_CASIO_GETKEY)
         return casio_key
 
@@ -336,7 +355,7 @@ class CasioInterpreter(NodeVisitor):
             self._set_color(True)
             fline(self.renderer, int(x0), int(y0), int(x1), int(y1))
             self._render_end()
-            self._handle_events(delay=True)
+            self._handle_events(pump=False)
         else:
             raise Exception('Unknown QuaternaryBuiltin op type: {}'.format(node.op.type))
 
@@ -353,7 +372,7 @@ class CasioInterpreter(NodeVisitor):
             self._render_begin(self.texture_graph)
             text(self.renderer, self.font_graph, int(x), int(y), s)
             self._render_end()
-            self._handle_events(delay=True)
+            self._handle_events(pump=False)
         elif node.op.type == LOCATE:
             x = self._visit(node.arg1)
             y = self._visit(node.arg2)
@@ -366,7 +385,7 @@ class CasioInterpreter(NodeVisitor):
             self._render_begin(self.texture_text)
             locate(self.renderer, self.font_text, int(x), int(y), s)
             self._render_end()
-            self._handle_events(delay=True)
+            self._handle_events(pump=False)
         else:
             raise Exception('Unknown TernaryBuiltin op type: {}'.format(node.op.type))
 
@@ -378,7 +397,7 @@ class CasioInterpreter(NodeVisitor):
             self._set_color(True)
             setpixel(self.renderer, int(x), int(y))
             self._render_end()
-            self._handle_events(delay=True)
+            self._handle_events(pump=False)
         elif node.op.type == PXLOFF:
             y = self._visit(node.arg1)
             x = self._visit(node.arg2)
@@ -386,7 +405,7 @@ class CasioInterpreter(NodeVisitor):
             self._set_color(False)
             setpixel(self.renderer, int(x), int(y))
             self._render_end()
-            self._handle_events(delay=True)
+            self._handle_events(pump=False)
         else:
             raise Exception('Unknown BinaryBuiltin op type: {}'.format(node.op.type))
 
@@ -424,7 +443,6 @@ class CasioInterpreter(NodeVisitor):
             # NB: this is an incomplete impl!
             self._assign(self._retrieve(node.arg1) - 1, node.arg1)
         elif node.op.type == STRING:
-            # todo: render to display, not terminal
             s = self._visit(node.arg1)
             self._locate_out(s)
         else:

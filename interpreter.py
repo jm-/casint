@@ -640,7 +640,12 @@ class Parser(object):
         self.current_token = self.lexer.get_next_token()
 
     def error(self):
-        raise Exception('Invalid syntax: tok=%r pos=%d chr=%r' % (self.current_token, self.lexer.pos, self.lexer.current_char))
+        raise Exception(
+            f'Invalid syntax:'
+            f' tok={self.current_token}'
+            f' pos={self.lexer.pos}'
+            f' chr={self.lexer.current_char}'
+        )
 
     def eat(self, token_type):
         # compare the current token type with the passed token
