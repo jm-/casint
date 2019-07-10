@@ -43,7 +43,7 @@ class NodeVisitor(object):
         raise Exception('No _visit_{} method'.format(type(node).__name__))
 
 
-class CasioInterpreter(NodeVisitor):
+class CasioMachine(NodeVisitor):
     def __init__(self, programs):
         self.key = None
 
@@ -180,7 +180,7 @@ class CasioInterpreter(NodeVisitor):
 
     def run(self, name):
         program = self.programs.get(name)
-        self._set_window_title(name)
+        self._set_window_title(program.get_printable_name())
         try:
             self._visit(program.tree)
         except ProgramStopException:
@@ -424,7 +424,6 @@ class CasioInterpreter(NodeVisitor):
             # NB: this is an incomplete impl!
             self._assign(self._retrieve(node.arg1) - 1, node.arg1)
         elif node.op.type == STRING:
-            # todo: render to display, not terminal
             s = self._visit(node.arg1)
             self._locate_out(s)
         else:
