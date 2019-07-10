@@ -43,6 +43,7 @@ def main(filepath):
                 # display a program selection using the machine
                 selection = menu.show()
                 casio.run(programs[selection].name)
+                casio.wait_for_any_key()
         except InterpreterQuitException:
             return 0
         except:
@@ -60,7 +61,6 @@ def main(filepath):
 
 
 if __name__ == '__main__':
-
     if len(sys.argv) == 2:
         sys.exit(main(sys.argv[1]))
     else:
