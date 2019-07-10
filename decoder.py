@@ -21,7 +21,8 @@ class CasioProgram(object):
     def __str__(self):
         isParsed = hasattr(self, 'tree') and self.tree
         status = '(valid)' if isParsed else '(invalid)'
-        return f'{self.name:-8s}    : {self.size:5d} {status}'
+        stringname = self.name.decode('ascii')
+        return f'{stringname:8s}  : {self.size:5d} {status}'
 
     def __repr__(self):
         return self.__str__()
@@ -30,7 +31,7 @@ class CasioProgram(object):
 class G1mFile(object):
     def __init__(self, filepath, debug=False):
         self.filepath = filepath
-        self.debug = True
+        self.debug = debug
         # table for G1M character set
         self.char_encoding_table = bytes.maketrans(
             b'\x89\x99',
