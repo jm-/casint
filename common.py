@@ -84,8 +84,11 @@ ALPHA_MEM_CHARS = b'ABCDEFGHIJKLMNOPQRSTUVWXYZ\xcd\xce\xd0'
 
 # table for G1M character set
 CHARACTER_ENCODING_TABLE = bytes.maketrans(
-	b'\x89\x99',
-	b'\x2b\x7e'
+	b'\x89\x99\xab',
+	b'\x2b\x7e\x21'
 )
+
+def translate_string_literal(b):
+	return b.translate(CHARACTER_ENCODING_TABLE)
 
 UCB_INDENTATION = 4

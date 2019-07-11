@@ -2,7 +2,7 @@ import struct
 
 import bitstring
 
-from common import CHARACTER_ENCODING_TABLE
+from common import translate_string_literal
 from interpreter import Lexer, Parser
 
 
@@ -22,7 +22,7 @@ class CasioProgram(object):
             self.tree = None
 
     def get_printable_name(self):
-        return self.name.translate(CHARACTER_ENCODING_TABLE)
+        return translate_string_literal(self.name)
 
     def __str__(self):
         isParsed = hasattr(self, 'tree') and self.tree
