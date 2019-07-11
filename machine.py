@@ -10,6 +10,46 @@ from graphics import setpixel, pxltest, fline, text, locate
 SDL_DELAY_MILLIS = 16
 ASPECT_RATIO = 2.0
 
+DEFAULT_CASIO_GETKEY = 0
+SDL_CASIO_KEYMAP = {
+	sdl2.SDLK_UP		: 28,
+	sdl2.SDLK_RIGHT		: 27,
+	sdl2.SDLK_DOWN		: 37,
+	sdl2.SDLK_LEFT		: 38,
+	sdl2.SDLK_RETURN	: 31,
+	sdl2.SDLK_0			: 71,
+	sdl2.SDLK_1			: 72,
+	sdl2.SDLK_2			: 62,
+	sdl2.SDLK_3			: 52,
+	sdl2.SDLK_4			: 73,
+	sdl2.SDLK_5			: 63,
+	sdl2.SDLK_6			: 53,
+	sdl2.SDLK_7			: 74,
+	sdl2.SDLK_8			: 64,
+	sdl2.SDLK_9			: 54,
+	sdl2.SDLK_PERIOD	: 61,
+	sdl2.SDLK_KP_0		: 71,
+	sdl2.SDLK_KP_1		: 72,
+	sdl2.SDLK_KP_2		: 62,
+	sdl2.SDLK_KP_3		: 52,
+	sdl2.SDLK_KP_4		: 73,
+	sdl2.SDLK_KP_5		: 63,
+	sdl2.SDLK_KP_6		: 53,
+	sdl2.SDLK_KP_7		: 74,
+	sdl2.SDLK_KP_8		: 64,
+	sdl2.SDLK_KP_9		: 54,
+	sdl2.SDLK_KP_PERIOD	: 61,
+	sdl2.SDLK_F1		: 79,
+	sdl2.SDLK_F2		: 69,
+	sdl2.SDLK_F3		: 59,
+	sdl2.SDLK_F4		: 49,
+	sdl2.SDLK_F5		: 39,
+	sdl2.SDLK_F6		: 29,
+	sdl2.SDLK_ESCAPE	: 47,
+	sdl2.SDLK_LCTRL		: 48,
+	sdl2.SDLK_RCTRL		: 48
+}
+
 
 class SubroutineReturnException(Exception):
     pass
@@ -325,9 +365,6 @@ class CasioMachine(NodeVisitor):
             # didn't find it, pass it on
             raise GotoException(goto)
 
-    def _visit_NoOp(self, node):
-        pass
-
     def _visit_Program(self, node):
         #for statement in node.children:
         #    self._visit(statement)
@@ -365,7 +402,7 @@ class CasioMachine(NodeVisitor):
             x = self._visit(node.arg2)
             s = self._visit(node.arg3)
             if type(s) is not bytes:
-                if type(s) is float and s == int(s):
+                if type(s) is float and s.is_integer():
                     # don't print decimals
                     s = int(s)
                 s = bytes(str(s), 'ascii')

@@ -70,6 +70,7 @@ class Lexer(object):
         while self.current_char is not None and is_numeric(self.current_char):
             result += self.current_char
             self.advance()
+        #print(f'numeric: {result}')
         if b'.' in result:
             return float(result)
         return float(int(result))
@@ -81,7 +82,7 @@ class Lexer(object):
             result += self.current_char
             self.advance()
         self.advance()
-        #print(f'string lit: {repr(result)}')
+        #print(f'string lit: {result}')
         return result
 
     def comment(self):
@@ -467,6 +468,10 @@ class MemoryStructure(AST):
     def __init__(self, op, token):
         self.op = op
         self.value = token.value
+    
+    def write_ucb(self, fp, indent):
+        fp.write(self.op.value)
+        fp.write(self.value)
 
 
 class MemoryIndex(AST):
@@ -474,6 +479,14 @@ class MemoryIndex(AST):
     def __init__(self, left, right):
         self.left = left
         self.right = right
+    
+    def write_ucb(self, fp, indent):
+        self.left.write_ucb(fp, indent)
+        fp.write(b'[')
+        self.right[0].write_ucb(fp, indent)
+        fp.write(b', ')
+        self.right[1].write_ucb(fp, indent)
+        fp.write(b']')
 
 
 class BinOp(AST):
@@ -481,32 +494,61 @@ class BinOp(AST):
         self.left = left
         self.op = op
         self.right = right
+    
+    def write_ucb(self, fp, indent):
+        self.left.write_ucb(fp, indent)
+        fp.write(b' ')
+        fp.write(self.op.value)
+        fp.write(b' ')
+        self.right.write_ucb(fp, indent)
 
 
 class Num(AST):
     def __init__(self, token):
         self.value = token.value
+    
+    def write_ucb(self, fp, indent):
+        val = self.value
+        if type(val) is float and val.is_integer():
+            val = int(val)
+        fp.write(bytes(str(val), 'ascii'))
 
 
 class StringLit(AST):
     def __init__(self, token):
         self.value = token.value
+    
+    def write_ucb(self, fp, indent):
+        fp.write(b'"')
+        fp.write(self.value)
+        fp.write(b'"')
 
 
 class Var(AST):
     def __init__(self, token):
         self.value = token.value
+    
+    def write_ucb(self, fp, indent):
+        fp.write(self.value)
 
 
 class UnaryOp(AST):
     def __init__(self, op, expr):
         self.op = op
         self.expr = expr
+    
+    def write_ucb(self, fp, indent):
+        fp.write(self.op.value)
+        self.expr.write_ucb(fp, indent)
 
 
 class Program(AST):
     def __init__(self):
         self.children = []
+    
+    def write_ucb(self, fp, indent):
+        for child in self.children:
+            child.write_ucb(fp, indent)
 
 
 class IfThen(AST):
@@ -514,6 +556,22 @@ class IfThen(AST):
         self.condition = condition
         self.if_clause = []
         self.else_clause = []
+    
+    def write_ucb(self, fp, indent):
+        fp.write(b'if (')
+        self.condition.write_ucb(fp, indent)
+        fp.write(b') {\n')
+        for child in self.if_clause:
+            fp.write(b' ' * UCB_INDENTATION * (indent + 1))
+            child.write_ucb(fp, indent + 1)
+        if self.else_clause:
+            fp.write(b' ' * UCB_INDENTATION * (indent))
+            fp.write(b'} else {\n')
+            for child in self.else_clause:
+                fp.write(b' ' * UCB_INDENTATION * (indent + 1))
+                child.write_ucb(fp, indent)
+        fp.write(b' ' * UCB_INDENTATION * (indent))
+        fp.write(b'}\n')
 
 
 class ForTo(AST):
@@ -523,40 +581,97 @@ class ForTo(AST):
         self.step = step
         self.var = var
         self.children = []
+    
+    def write_ucb(self, fp, indent):
+        fp.write(b'for (')
+        self.var.write_ucb(fp, indent)
+        fp.write(b' = ')
+        self.start.write_ucb(fp, indent)
+        fp.write(b' to ')
+        self.end.write_ucb(fp, indent)
+        if self.step:
+            fp.write(b' step ')
+            self.step.write_ucb(fp, indent)
+        fp.write(b') {\n')
+        for child in self.children:
+            fp.write(b' ' * UCB_INDENTATION * (indent + 1))
+            child.write_ucb(fp, indent + 1)
+        fp.write(b' ' * UCB_INDENTATION * (indent))
+        fp.write(b'}\n')
 
 
 class WhileLoop(AST):
     def __init__(self):
         self.condition = None
         self.children = []
+    
+    def write_ucb(self, fp, indent):
+        fp.write(b'while (')
+        self.condition.write_ucb(fp, indent)
+        fp.write(b') {\n')
+        for child in self.children:
+            fp.write(b' ' * UCB_INDENTATION * (indent + 1))
+            child.write_ucb(fp, indent + 1)
+        fp.write(b' ' * UCB_INDENTATION * (indent))
+        fp.write(b'}\n')
 
 
 class DoLpWhile(AST):
     def __init__(self):
         self.children = []
         self.condition = None
+    
+    def write_ucb(self, fp, indent):
+        fp.write(b'do {\n')
+        for child in self.children:
+            fp.write(b' ' * UCB_INDENTATION * (indent + 1))
+            child.write_ucb(fp, indent + 1)
+        fp.write(b' ' * UCB_INDENTATION * (indent))
+        fp.write(b'} while (')
+        self.condition.write_ucb(fp, indent)
+        fp.write(b');\n')
 
 
 class NullaryBuiltin(AST):
     def __init__(self, op):
         self.op = op
+    
+    def write_ucb(self, fp, indent):
+        fp.write(self.op.value)
+        fp.write(b'();\n')
 
 
 class NullaryFunc(AST):
     def __init__(self, op):
         self.op = op
+    
+    def write_ucb(self, fp, indent):
+        fp.write(self.op.value)
+        fp.write(b'()')
 
 
 class UnaryBuiltin(AST):
     def __init__(self, op, arg1):
         self.op = op
         self.arg1 = arg1
+    
+    def write_ucb(self, fp, indent):
+        fp.write(self.op.value)
+        fp.write(b'(')
+        self.arg1.write_ucb(fp, indent)
+        fp.write(b');\n')
 
 
 class UnaryFunc(AST):
     def __init__(self, op, arg1):
         self.op = op
         self.arg1 = arg1
+    
+    def write_ucb(self, fp, indent):
+        fp.write(self.op.value)
+        fp.write(b'(')
+        self.arg1.write_ucb(fp, indent)
+        fp.write(b')')
 
 
 class BinaryBuiltin(AST):
@@ -564,6 +679,14 @@ class BinaryBuiltin(AST):
         self.op = op
         self.arg1 = arg1
         self.arg2 = arg2
+    
+    def write_ucb(self, fp, indent):
+        fp.write(self.op.value)
+        fp.write(b'(')
+        self.arg1.write_ucb(fp, indent)
+        fp.write(b', ')
+        self.arg2.write_ucb(fp, indent)
+        fp.write(b');\n')
 
 
 class BinaryFunc(AST):
@@ -571,6 +694,14 @@ class BinaryFunc(AST):
         self.op = op
         self.arg1 = arg1
         self.arg2 = arg2
+    
+    def write_ucb(self, fp, indent):
+        fp.write(self.op.value)
+        fp.write(b'(')
+        self.arg1.write_ucb(fp, indent)
+        fp.write(b', ')
+        self.arg2.write_ucb(fp, indent)
+        fp.write(b')')
 
 
 class TernaryBuiltin(AST):
@@ -579,6 +710,16 @@ class TernaryBuiltin(AST):
         self.arg1 = arg1
         self.arg2 = arg2
         self.arg3 = arg3
+    
+    def write_ucb(self, fp, indent):
+        fp.write(self.op.value)
+        fp.write(b'(')
+        self.arg1.write_ucb(fp, indent)
+        fp.write(b', ')
+        self.arg2.write_ucb(fp, indent)
+        fp.write(b', ')
+        self.arg3.write_ucb(fp, indent)
+        fp.write(b');\n')
 
 
 class QuaternaryBuiltin(AST):
@@ -588,6 +729,18 @@ class QuaternaryBuiltin(AST):
         self.arg2 = arg2
         self.arg3 = arg3
         self.arg4 = arg4
+    
+    def write_ucb(self, fp, indent):
+        fp.write(self.op.value)
+        fp.write(b'(')
+        self.arg1.write_ucb(fp, indent)
+        fp.write(b', ')
+        self.arg2.write_ucb(fp, indent)
+        fp.write(b', ')
+        self.arg3.write_ucb(fp, indent)
+        fp.write(b', ')
+        self.arg4.write_ucb(fp, indent)
+        fp.write(b');\n')
 
 
 class SenaryBuiltin(AST):
@@ -599,38 +752,80 @@ class SenaryBuiltin(AST):
         self.arg4 = arg4
         self.arg5 = arg5
         self.arg6 = arg6
+    
+    def write_ucb(self, fp, indent):
+        fp.write(self.op.value)
+        fp.write(b'(')
+        self.arg1.write_ucb(fp, indent)
+        fp.write(b', ')
+        self.arg2.write_ucb(fp, indent)
+        fp.write(b', ')
+        self.arg3.write_ucb(fp, indent)
+        fp.write(b', ')
+        self.arg4.write_ucb(fp, indent)
+        fp.write(b', ')
+        self.arg5.write_ucb(fp, indent)
+        fp.write(b', ')
+        self.arg6.write_ucb(fp, indent)
+        fp.write(b');\n')
 
 
 class Assign(AST):
     def __init__(self, left, right):
         self.left = left
         self.right = right
+    
+    def write_ucb(self, fp, indent):
+        self.right.write_ucb(fp, indent)
+        fp.write(b' = ')
+        self.left.write_ucb(fp, indent)
+        fp.write(b';\n')
 
 
 class VariableRange(AST):
     def __init__(self, lower, upper):
         self.lower = lower
         self.upper = upper
+    
+    def write_ucb(self, fp, indent):
+        self.lower.write_ucb(fp, indent)
+        fp.write(b'~')
+        self.upper.write_ucb(fp, indent)
 
 
 class Initialize(AST):
     def __init__(self, left, right):
         self.left = left
         self.right = right
+    
+    def write_ucb(self, fp, indent):
+        fp.write(b'Dim ')
+        self.right.write_ucb(fp, indent)
+        fp.write(b' = (')
+        self.left[0].write_ucb(fp, indent)
+        fp.write(b', ')
+        self.left[1].write_ucb(fp, indent)
+        fp.write(b');\n')
 
 
 class Label(AST):
     def __init__(self, op):
         self.op = op
+    
+    def write_ucb(self, fp, indent):
+        fp.write(b'Label ')
+        self.op.write_ucb(fp, indent)
+        fp.write(b';\n')
 
 
 class Goto(AST):
     def __init__(self, op):
         self.op = op
-
-
-class NoOp(AST):
-    pass
+    
+    def write_ucb(self, fp, indent):
+        fp.write(b'Goto ')
+        self.op.write_ucb(fp, indent)
+        fp.write(b';\n')
 
 
 class Parser(object):
@@ -677,9 +872,10 @@ class Parser(object):
         return root
 
     def statement_list(self):
+        results = []
         node = self.statement()
-
-        results = [node]
+        if node:
+            results.append(node)
 
         while self.current_token.type in (SEMI, DISP):
             if self.current_token.type == SEMI:
@@ -689,7 +885,9 @@ class Parser(object):
                 self.eat(DISP)
 
             if self.current_token.type != EOF:
-                results.append(self.statement())
+                statement = self.statement()
+                if statement:
+                    results.append(statement)
 
         return results
 
@@ -931,7 +1129,9 @@ class Parser(object):
             condition = self.expr()
         root = IfThen(condition)
         self.eat(INLINEIF)
-        root.if_clause.append(self.statement())
+        statement = self.statement()
+        if statement:
+            root.if_clause.append(statement)
         return root
 
     def for_to(self):
@@ -941,7 +1141,7 @@ class Parser(object):
         var = self.factor_ref()
         self.eat(TO)
         end = self.expr()
-        step = Num(Token(INTEGER, 1))
+        step = Num(Token(INTEGER, 1.0))
         if self.current_token.type == STEP:
             self.eat(STEP)
             step = self.expr()
@@ -1062,7 +1262,7 @@ class Parser(object):
         return node
 
     def empty(self):
-        return NoOp()
+        return None
 
     def condition(self):
         node = self.and_condition()
