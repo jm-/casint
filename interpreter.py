@@ -520,7 +520,7 @@ class StringLit(AST):
     
     def write_ucb(self, fp, indent):
         fp.write(b'"')
-        fp.write(self.value)
+        fp.write(translate_string_literal(self.value))
         fp.write(b'"')
 
 
