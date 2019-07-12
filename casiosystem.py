@@ -1,7 +1,7 @@
 import time
 
 from common import *
-from graphics import setpixel, text, locate
+from graphics import setpixel, text, locate, fill
 
 
 NUM_TEXT_ROWS = 6
@@ -23,10 +23,14 @@ class ProgramMenu(object):
         i = 0
         while i < NUM_TEXT_ROWS and (i+self.offset) < len(self.programs):
             program = self.programs[i+self.offset]
-            locate(self.casio.renderer, self.casio.font_text, 2, i+2, program.name)
+            if (self.selection-self.offset) == i:
+                # print the marker in inverted text
+                self.casio._set_color(True)
+                fill(self.casio.renderer, 1, i * 8 + 8, 127, i * 8 + 16)
+                locate(self.casio.renderer, self.casio.font_text_inverted, 2, i+2, program.name)
+            else:
+                locate(self.casio.renderer, self.casio.font_text, 2, i+2, program.name)
             i += 1
-        # print the marker
-        locate(self.casio.renderer, self.casio.font_text, 1, self.selection-self.offset+2, b'>')
         self.casio._render_end()
     
     def show(self):
