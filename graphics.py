@@ -18,9 +18,8 @@ def pxltest(renderer, x, y):
     # get the pixel
     sdl2.SDL_RenderReadPixels(renderer, pxl, sdl2.SDL_PIXELFORMAT_RGBA8888, ctypes.byref(p), 512)
     p_bytes = ctypes.cast(p, ctypes.POINTER(ctypes.c_uint8 * 4))
-    m = memoryview(p_bytes)
-    b = m.tobytes()
-    return b[1:4] == b'\x10\x10\x10'
+    m = memoryview(p_bytes).cast('B')
+    return m[1:4] == b'\x10\x10\x10'
 
 def fline(renderer, x0, y0, x1, y1):
     """
