@@ -149,18 +149,61 @@ class CasioMachine(NodeVisitor):
         self._clear_screen()
         self._render_end()
 
-        self.font_graph = self._load_texture(b'img/font_graph.bmp')
-        self.font_text = self._load_texture(b'img/font_text.bmp')
+        self.font_graph, self.font_graph_inverted = self._load_texture(b'img/font_graph.bmp')
+        self.font_text, self.font_text_inverted = self._load_texture(b'img/font_text.bmp')
 
     def _initialize_text(self):
         self.text_line = 0
 
+    def _create_inverted_texture(self, surface):
+        # copy the pixels in
+        sdl2.SDL_LockSurface(surface)
+        surface_p = ctypes.c_void_p.from_address(surface.contents.pixels)
+        pixelsize = surface.contents.format.contents.BytesPerPixel
+        assert pixelsize == 3
+        bytecount = surface.contents.w * surface.contents.h * pixelsize
+        # create memory for copy of pixel data
+        new_p = (ctypes.c_uint8 * bytecount)()
+        ref_p = ctypes.byref(new_p)
+        ctypes.memmove(
+            ref_p,
+            ctypes.byref(surface_p),
+            bytecount
+        )
+        sdl2.SDL_UnlockSurface(surface)
+
+        # swap pixels
+        m = memoryview(new_p).cast('B')
+        i = 0
+        j = pixelsize
+        while j < bytecount:
+            if m[i:j] == b'\xee\xe8\xe8':
+                m[i:j] = b'\x10\x10\x10'
+            else:
+                m[i:j] = b'\xee\xe8\xe8'
+            i += pixelsize
+            j += pixelsize
+
+        new_surface = sdl2.SDL_CreateRGBSurfaceWithFormatFrom(
+            ref_p,
+            surface.contents.w,
+            surface.contents.h,
+            surface.contents.format.contents.BitsPerPixel,
+            surface.contents.pitch,
+            surface.contents.format.contents.format
+        )
+        texture = sdl2.SDL_CreateTextureFromSurface(self.renderer, new_surface)
+        sdl2.SDL_FreeSurface(new_surface)
+        return texture
+
     def _load_texture(self, filename):
         surface = sdl2.SDL_LoadBMP(filename)
         texture = sdl2.SDL_CreateTextureFromSurface(self.renderer, surface)
+        # create a copy of inverted pixels
+        inverted_texture = self._create_inverted_texture(surface)
         # free the surface
         sdl2.SDL_FreeSurface(surface)
-        return texture
+        return texture, inverted_texture
 
     def _render_begin(self, texture_target):
         self.current_texture = texture_target

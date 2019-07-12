@@ -61,6 +61,10 @@ def fline(renderer, x0, y0, x1, y1):
     ptr = ctypes.cast(points, ctypes.POINTER(sdl2.SDL_Point))
     sdl2.SDL_RenderDrawPoints(renderer, ptr, c)
 
+def fill(renderer, x0, y0, x1, y1):
+    rect = sdl2.SDL_Rect(x0, y0, x1-x0, y1-y0)
+    sdl2.SDL_RenderFillRect(renderer, rect)
+
 GRAPH_RECTS = {
     b'A':        sdl2.SDL_Rect(0,  0,  4,  6),
     b'B':        sdl2.SDL_Rect(6,  0,  4,  6),
