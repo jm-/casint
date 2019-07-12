@@ -267,7 +267,9 @@ class CasioMachine(NodeVisitor):
         sdl2.SDL_DestroyTexture(self.texture_text)
         sdl2.SDL_DestroyTexture(self.texture_scroll)
         sdl2.SDL_DestroyTexture(self.font_text)
+        sdl2.SDL_DestroyTexture(self.font_text_inverted)
         sdl2.SDL_DestroyTexture(self.font_graph)
+        sdl2.SDL_DestroyTexture(self.font_graph_inverted)
         # clean up stored pics
         for pic in list(self.pics.values()):
             sdl2.SDL_DestroyTexture(pic)
