@@ -28,18 +28,6 @@ def main(filepath):
 
         try:
             while True:
-                # TODO: replace with choose_program method
-                # for i in range(num_programs):
-                #     print(f'{i:2d} {programs[i]}')
-                # selection = -1
-                # while not (0 <= selection < num_programs):
-                #     try:
-                #         selection = int(input('choose: '))
-                #     except KeyboardInterrupt:
-                #         return 0
-                #     except:
-                #         selection = -1
-                
                 # display a program selection using the machine
                 selection = menu.show()
                 casio.run(programs[selection].name)
@@ -50,8 +38,8 @@ def main(filepath):
             e = sys.exc_info()
             trace = '' if e[0] is None else ''.join(traceback.format_exception(*e))
             print(trace)
-            #print((casio.vars))
-            #print((casio.mats))
+            print((casio.vars))
+            print((casio.mats))
             return 2
 
         # wait for user to close program
