@@ -3,7 +3,7 @@ COMMENT = b'COMMENT'
 VARIABLE = b'VARIABLE'
 PROMPT = b'PROMPT'
 ASSIGN = b'ASSIGN'
-INTEGER = b'INTEGER'
+NUMBER = b'NUMBER'
 STRING = b'STRING'
 PLUS = b'PLUS'
 MINUS = b'MINUS'
@@ -92,3 +92,8 @@ def translate_string_literal(b):
 	return b.translate(CHARACTER_ENCODING_TABLE)
 
 UCB_INDENTATION = 4
+UCB_WORD_CHARACTERS = (
+	b'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+	b'abcdefghijklmnopqrstuvwxyz'
+	b'0123456789_.'
+)

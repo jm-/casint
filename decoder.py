@@ -1,35 +1,29 @@
+import os
 import struct
 
 import bitstring
 
 from common import translate_string_literal
-from interpreter import Lexer, Parser
+from interpreter import G1mLexer, UcbLexer, G1mParser, UcbParser
 
 
 class CasioProgram(object):
-    def __init__(self, name, text):
+    def __init__(self, name, size, tree):
         self.name = name
-        self.size = len(text)
-        # first 10 bytes are reserved
-        lexer = Lexer(text[10:])
-        parser = Parser(lexer)
-        self._parse(parser)
+        self.size = size
+        self.tree = tree
 
-    def _parse(self, parser):
-        try:
-            self.tree = parser.parse()
-        except:
-            self.tree = None
 
     def get_printable_name(self):
         return translate_string_literal(self.name)
 
+
     def __str__(self):
-        isParsed = hasattr(self, 'tree') and self.tree
-        status = '(valid)' if isParsed else '(invalid)'
+        status = '(valid)' if self.tree else '(invalid)'
         # translate the title
-        stringname = self.get_printable_name().decode('ascii')
+        stringname = str(self.get_printable_name(), 'ascii')
         return f'{stringname:8s}  : {self.size:5d} {status}'
+
 
     def __repr__(self):
         return self.__str__()
@@ -39,6 +33,7 @@ class G1mFile(object):
     def __init__(self, filepath, debug=False):
         self.filepath = filepath
         self.debug = debug
+
 
     def _read_header(self, fp):
         headerBytes = fp.read(32)
@@ -74,6 +69,7 @@ class G1mFile(object):
         assert magicSequence2 == b'\x01'
 
         return numItems
+
 
     def _read_item(self, fp):
         itemHeader1 = fp.read(20)
@@ -114,8 +110,18 @@ class G1mFile(object):
         # make sure the item is a program
         assert itemTypeIdentifier == 0x01
 
-        program = CasioProgram(itemTitle.rstrip(b'\x00'), itemData)
+        # first 10 bytes are reserved
+        lexer = G1mLexer(itemData[10:])
+        parser = G1mParser(lexer)
+        tree = parser.parse()
+
+        program = CasioProgram(
+            itemTitle.partition(b'\x00')[0],
+            len(itemData),
+            tree
+        )
         return program
+
 
     def load(self):
         with open(self.filepath, 'rb') as fp:
@@ -128,3 +134,33 @@ class G1mFile(object):
                 programs[i] = self._read_item(fp)
                 i += 1
             return programs
+
+
+def load_program_from_ucb_file(filepath):
+    with open(filepath, 'rb') as fp:
+        ucb_data = fp.read()
+    lexer = UcbLexer(ucb_data)
+    parser = UcbParser(lexer)
+    tree = parser.parse()
+
+    program = CasioProgram(
+        os.path.basename(filepath).rpartition('.')[0].encode('ascii'),
+        len(ucb_data),
+        tree
+    )
+
+
+def load_programs_from_ucb_dir(dirpath):
+    programs = []
+    for filename in os.listdir(dirpath):
+        if not filename.lower().endswith('.ucb'):
+            continue
+        filepath = os.path.join(dirpath, filename)
+        program = load_program_from_ucb_file(filepath)
+        programs.append(program)
+    return programs
+
+
+def load_programs_from_g1m_file(filepath):
+    g1mfile = G1mFile(filepath, debug=False)
+    return g1mfile.load()
