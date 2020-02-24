@@ -1,16 +1,26 @@
 from common import *
 
 
+class LexerException(Exception):
+    pass
+
+
+class ParserException(Exception):
+    pass
+
+
 class Token(object):
     def __init__(self, type, value):
         self.type = type
         self.value = value
+
 
     def __str__(self):
         return 'Token({type}, {value})'.format(
             type=self.type,
             value=repr(self.value)
         )
+
 
     def __repr__(self):
         return self.__str__()
@@ -23,7 +33,18 @@ def is_variable(char):
 def is_numeric(char):
     return char in b'01234567890.'
 
-class Lexer(object):
+
+def is_ucb_word_character(char):
+    return char in UCB_WORD_CHARACTERS
+
+
+def parse_word_as_number(word):
+    if b'.' in word:
+        return float(word)
+    return float(int(word))
+
+
+class Lexer():
     def __init__(self, text):
         self.text = text
         self.pos = 0
@@ -31,12 +52,14 @@ class Lexer(object):
         if self.current_char == b'\x00':
             self.current_char = None
 
+
     def error(self):
-        raise Exception(
+        raise LexerException(
             f'Invalid character:'
             f' pos={self.pos}'
             f' chrs={self.text[self.pos:self.pos+5]}'
         )
+
 
     def advance(self):
         """Advance the `pos` pointer and set the `current_char` variable."""
@@ -48,8 +71,10 @@ class Lexer(object):
             if self.current_char == b'\x00':
                 self.current_char = None
 
+
     def freeze(self):
         return self.pos
+
 
     def seek(self, pos):
         self.pos = pos
@@ -57,13 +82,16 @@ class Lexer(object):
         if self.current_char == b'\x00':
             self.current_char = None
 
+
     def peek(self):
         peek_pos = self.pos + 1
         if peek_pos > len(self.text) - 1:
             return None
-        else:
-            return self.text[peek_pos:peek_pos+1]
+        char = self.text[peek_pos:peek_pos+1]
+        return char
 
+
+class G1mLexer(Lexer):
     def numeric(self):
         """Return a (multidigit) integer consumed from the input."""
         result = b''
@@ -71,9 +99,8 @@ class Lexer(object):
             result += self.current_char
             self.advance()
         #print(f'numeric: {result}')
-        if b'.' in result:
-            return float(result)
-        return float(int(result))
+        return parse_word_as_number(result)
+
 
     def string(self):
         result = b''
@@ -85,12 +112,14 @@ class Lexer(object):
         #print(f'string lit: {result}')
         return result
 
+
     def comment(self):
         result = b''
         while self.current_char is not None and self.current_char not in (b':', b'\x0d'):
             result += self.current_char
             self.advance()
         return result
+
 
     def get_next_token(self):
         """Lexical analyzer (also known as scanner or tokenizer)
@@ -391,7 +420,7 @@ class Lexer(object):
                 return token
 
             if is_numeric(self.current_char):
-                return Token(INTEGER, self.numeric())
+                return Token(NUMBER, self.numeric())
 
             if self.current_char == b'"':
                 return Token(STRING, self.string())
@@ -460,6 +489,109 @@ class Lexer(object):
         return Token(EOF, None)
 
 
+class UcbLexer(Lexer):
+    def string(self):
+        result = b''
+        self.advance()
+        while self.current_char is not None and self.current_char != b'"':
+            result += self.current_char
+            self.advance()
+        self.advance()
+        return result
+
+
+    def ucb_word(self):
+        result = b''
+        while self.current_char is not None and is_ucb_word_character(self.current_char):
+            result += self.current_char
+            self.advance()
+        return result
+
+
+    def get_next_token(self):
+        while self.current_char is not None:
+            print(f'{self.current_char}')
+
+            if self.current_char in (b' ', b'\n'):
+                # ignore whitespace
+                self.advance()
+                continue
+
+            if is_ucb_word_character(self.current_char):
+                word = self.ucb_word()
+                print(f'word: {word}')
+
+                if word == b'for':
+                    return Token(FOR, b'For ')
+
+                if word == b'to':
+                    return Token(TO, b'To ')
+
+                if word == b'step':
+                    return Token(STEP, b'Step ')
+
+                if word == b'Text':
+                    return Token(TEXT, b'Text ')
+
+                if word == b'F_Line':
+                    return Token(FLINE, b'F-Line ')
+
+                if len(word) == 1 and is_variable(word):
+                    return Token(VARIABLE, word)
+
+                if is_numeric(word[0]):
+                    return Token(NUMBER, parse_word_as_number(word))
+
+                else:
+                    self.error()
+
+            if self.current_char == b'"':
+                return Token(STRING, self.string())
+
+            if self.current_char == b',':
+                self.advance()
+                return Token(COMMA, b',')
+
+            if self.current_char == b';':
+                self.advance()
+                return Token(SEMI, b'EOL')
+
+            if self.current_char == b'=':
+                self.advance()
+                if self.peek() == b'=':
+                    self.advance()
+                    return Token(EQ, b'==')
+                return Token(ASSIGN, b'->')
+
+            if self.current_char == b'(':
+                self.advance()
+                return Token(LPAREN, b'(')
+
+            if self.current_char == b')':
+                self.advance()
+                return Token(RPAREN, b')')
+
+            if self.current_char == b'{':
+                self.advance()
+                return Token(LBRACE, b'{')
+
+            if self.current_char == b'}':
+                self.advance()
+                return Token(RBRACE, b'}')
+
+            if self.current_char == b'[':
+                self.advance()
+                return Token(LBRACKET, b'[')
+
+            if self.current_char == b']':
+                self.advance()
+                return Token(RBRACKET, b']')
+
+            self.error()
+
+        return Token(EOF, None)
+
+
 class AST(object):
     pass
 
@@ -468,7 +600,7 @@ class MemoryStructure(AST):
     def __init__(self, op, token):
         self.op = op
         self.value = token.value
-    
+
     def write_ucb(self, fp, indent):
         fp.write(self.op.value)
         fp.write(self.value)
@@ -479,7 +611,7 @@ class MemoryIndex(AST):
     def __init__(self, left, right):
         self.left = left
         self.right = right
-    
+
     def write_ucb(self, fp, indent):
         self.left.write_ucb(fp, indent)
         fp.write(b'[')
@@ -494,7 +626,7 @@ class BinOp(AST):
         self.left = left
         self.op = op
         self.right = right
-    
+
     def write_ucb(self, fp, indent):
         self.left.write_ucb(fp, indent)
         fp.write(b' ')
@@ -506,7 +638,7 @@ class BinOp(AST):
 class Num(AST):
     def __init__(self, token):
         self.value = token.value
-    
+
     def write_ucb(self, fp, indent):
         val = self.value
         if type(val) is float and val.is_integer():
@@ -517,7 +649,7 @@ class Num(AST):
 class StringLit(AST):
     def __init__(self, token):
         self.value = token.value
-    
+
     def write_ucb(self, fp, indent):
         fp.write(b'"')
         fp.write(translate_string_literal(self.value))
@@ -527,7 +659,7 @@ class StringLit(AST):
 class Var(AST):
     def __init__(self, token):
         self.value = token.value
-    
+
     def write_ucb(self, fp, indent):
         fp.write(self.value)
 
@@ -536,7 +668,7 @@ class UnaryOp(AST):
     def __init__(self, op, expr):
         self.op = op
         self.expr = expr
-    
+
     def write_ucb(self, fp, indent):
         fp.write(self.op.value)
         self.expr.write_ucb(fp, indent)
@@ -545,7 +677,7 @@ class UnaryOp(AST):
 class Program(AST):
     def __init__(self):
         self.children = []
-    
+
     def write_ucb(self, fp, indent):
         for child in self.children:
             child.write_ucb(fp, indent)
@@ -556,7 +688,7 @@ class IfThen(AST):
         self.condition = condition
         self.if_clause = []
         self.else_clause = []
-    
+
     def write_ucb(self, fp, indent):
         fp.write(b'if (')
         self.condition.write_ucb(fp, indent)
@@ -581,7 +713,7 @@ class ForTo(AST):
         self.step = step
         self.var = var
         self.children = []
-    
+
     def write_ucb(self, fp, indent):
         fp.write(b'for (')
         self.var.write_ucb(fp, indent)
@@ -604,7 +736,7 @@ class WhileLoop(AST):
     def __init__(self):
         self.condition = None
         self.children = []
-    
+
     def write_ucb(self, fp, indent):
         fp.write(b'while (')
         self.condition.write_ucb(fp, indent)
@@ -620,7 +752,7 @@ class DoLpWhile(AST):
     def __init__(self):
         self.children = []
         self.condition = None
-    
+
     def write_ucb(self, fp, indent):
         fp.write(b'do {\n')
         for child in self.children:
@@ -632,56 +764,71 @@ class DoLpWhile(AST):
         fp.write(b');\n')
 
 
-class NullaryBuiltin(AST):
-    def __init__(self, op):
+class KeywordBuiltin(AST):
+    def __init__(self, op, name):
         self.op = op
-    
+        self.name = name
+
     def write_ucb(self, fp, indent):
-        fp.write(self.op.value)
+        fp.write(self.name)
+        fp.write(b';\n')
+
+
+class NullaryBuiltin(AST):
+    def __init__(self, op, name):
+        self.op = op
+        self.name = name
+
+    def write_ucb(self, fp, indent):
+        fp.write(self.name)
         fp.write(b'();\n')
 
 
 class NullaryFunc(AST):
-    def __init__(self, op):
+    def __init__(self, op, name):
         self.op = op
-    
+        self.name = name
+
     def write_ucb(self, fp, indent):
-        fp.write(self.op.value)
+        fp.write(self.name)
         fp.write(b'()')
 
 
 class UnaryBuiltin(AST):
-    def __init__(self, op, arg1):
+    def __init__(self, op, name, arg1):
         self.op = op
+        self.name = name
         self.arg1 = arg1
-    
+
     def write_ucb(self, fp, indent):
-        fp.write(self.op.value)
+        fp.write(self.name)
         fp.write(b'(')
         self.arg1.write_ucb(fp, indent)
         fp.write(b');\n')
 
 
 class UnaryFunc(AST):
-    def __init__(self, op, arg1):
+    def __init__(self, op, name, arg1):
         self.op = op
+        self.name = name
         self.arg1 = arg1
-    
+
     def write_ucb(self, fp, indent):
-        fp.write(self.op.value)
+        fp.write(self.name)
         fp.write(b'(')
         self.arg1.write_ucb(fp, indent)
         fp.write(b')')
 
 
 class BinaryBuiltin(AST):
-    def __init__(self, op, arg1, arg2):
+    def __init__(self, op, name, arg1, arg2):
         self.op = op
+        self.name = name
         self.arg1 = arg1
         self.arg2 = arg2
-    
+
     def write_ucb(self, fp, indent):
-        fp.write(self.op.value)
+        fp.write(self.name)
         fp.write(b'(')
         self.arg1.write_ucb(fp, indent)
         fp.write(b', ')
@@ -690,13 +837,14 @@ class BinaryBuiltin(AST):
 
 
 class BinaryFunc(AST):
-    def __init__(self, op, arg1, arg2):
+    def __init__(self, op, name, arg1, arg2):
         self.op = op
+        self.name = name
         self.arg1 = arg1
         self.arg2 = arg2
-    
+
     def write_ucb(self, fp, indent):
-        fp.write(self.op.value)
+        fp.write(self.name)
         fp.write(b'(')
         self.arg1.write_ucb(fp, indent)
         fp.write(b', ')
@@ -705,14 +853,15 @@ class BinaryFunc(AST):
 
 
 class TernaryBuiltin(AST):
-    def __init__(self, op, arg1, arg2, arg3):
+    def __init__(self, op, name, arg1, arg2, arg3):
         self.op = op
+        self.name = name
         self.arg1 = arg1
         self.arg2 = arg2
         self.arg3 = arg3
-    
+
     def write_ucb(self, fp, indent):
-        fp.write(self.op.value)
+        fp.write(self.name)
         fp.write(b'(')
         self.arg1.write_ucb(fp, indent)
         fp.write(b', ')
@@ -723,15 +872,16 @@ class TernaryBuiltin(AST):
 
 
 class QuaternaryBuiltin(AST):
-    def __init__(self, op, arg1, arg2, arg3, arg4):
+    def __init__(self, op, name, arg1, arg2, arg3, arg4):
         self.op = op
+        self.name = name
         self.arg1 = arg1
         self.arg2 = arg2
         self.arg3 = arg3
         self.arg4 = arg4
-    
+
     def write_ucb(self, fp, indent):
-        fp.write(self.op.value)
+        fp.write(self.name)
         fp.write(b'(')
         self.arg1.write_ucb(fp, indent)
         fp.write(b', ')
@@ -744,17 +894,18 @@ class QuaternaryBuiltin(AST):
 
 
 class SenaryBuiltin(AST):
-    def __init__(self, op, arg1, arg2, arg3, arg4, arg5, arg6):
+    def __init__(self, op, name, arg1, arg2, arg3, arg4, arg5, arg6):
         self.op = op
+        self.name = name
         self.arg1 = arg1
         self.arg2 = arg2
         self.arg3 = arg3
         self.arg4 = arg4
         self.arg5 = arg5
         self.arg6 = arg6
-    
+
     def write_ucb(self, fp, indent):
-        fp.write(self.op.value)
+        fp.write(self.name)
         fp.write(b'(')
         self.arg1.write_ucb(fp, indent)
         fp.write(b', ')
@@ -774,7 +925,7 @@ class Assign(AST):
     def __init__(self, left, right):
         self.left = left
         self.right = right
-    
+
     def write_ucb(self, fp, indent):
         self.right.write_ucb(fp, indent)
         fp.write(b' = ')
@@ -786,7 +937,7 @@ class VariableRange(AST):
     def __init__(self, lower, upper):
         self.lower = lower
         self.upper = upper
-    
+
     def write_ucb(self, fp, indent):
         self.lower.write_ucb(fp, indent)
         fp.write(b'~')
@@ -797,7 +948,7 @@ class Initialize(AST):
     def __init__(self, left, right):
         self.left = left
         self.right = right
-    
+
     def write_ucb(self, fp, indent):
         fp.write(b'Dim ')
         self.right.write_ucb(fp, indent)
@@ -811,9 +962,9 @@ class Initialize(AST):
 class Label(AST):
     def __init__(self, op):
         self.op = op
-    
+
     def write_ucb(self, fp, indent):
-        fp.write(b'Label ')
+        fp.write(b'label ')
         self.op.write_ucb(fp, indent)
         fp.write(b';\n')
 
@@ -821,21 +972,21 @@ class Label(AST):
 class Goto(AST):
     def __init__(self, op):
         self.op = op
-    
+
     def write_ucb(self, fp, indent):
-        fp.write(b'Goto ')
+        fp.write(b'goto ')
         self.op.write_ucb(fp, indent)
         fp.write(b';\n')
 
 
-class Parser(object):
+class Parser():
     def __init__(self, lexer):
         self.lexer = lexer
         # set current token to the first token taken from the input
         self.current_token = self.lexer.get_next_token()
 
     def error(self):
-        raise Exception(
+        raise ParserException(
             f'Invalid syntax:'
             f' tok={self.current_token}'
             f' pos={self.lexer.pos}'
@@ -857,9 +1008,10 @@ class Parser(object):
         token = self.current_token
         try:
             parse_func()
-            return True
         except:
             return False
+        else:
+            return True
         finally:
             self.lexer.seek(pos)
             self.current_token = token
@@ -896,30 +1048,30 @@ class Parser(object):
 
         if token.type == CLS:
             self.eat(CLS)
-            node = NullaryBuiltin(token)
+            node = NullaryBuiltin(token, b'Cls')
 
         elif token.type == COORDOFF:
             self.eat(COORDOFF)
-            node = NullaryBuiltin(token)
+            node = NullaryBuiltin(token, b'CoordOff')
 
         elif token.type == GRIDOFF:
             self.eat(GRIDOFF)
-            node = NullaryBuiltin(token)
+            node = NullaryBuiltin(token, b'GridOff')
 
         elif token.type == AXESOFF:
             self.eat(AXESOFF)
-            node = NullaryBuiltin(token)
+            node = NullaryBuiltin(token, b'AxesOff')
 
         elif token.type == LABELOFF:
             self.eat(LABELOFF)
-            node = NullaryBuiltin(token)
+            node = NullaryBuiltin(token, b'LabelOff')
 
         elif token.type == CLRTEXT:
             self.eat(CLRTEXT)
-            node = NullaryBuiltin(token)
+            node = NullaryBuiltin(token, b'ClrText')
 
         elif token.type == STRING:
-            node = UnaryBuiltin(token, self.string_literal())
+            node = UnaryBuiltin(token, b'Print', self.string_literal())
 
         elif token.type == COMMENT:
             self.eat(COMMENT)
@@ -928,26 +1080,26 @@ class Parser(object):
 
         elif token.type == RETURN:
             self.eat(RETURN)
-            node = NullaryBuiltin(token)
+            node = KeywordBuiltin(token, b'return')
 
         elif token.type == BREAK:
             self.eat(BREAK)
-            node = NullaryBuiltin(token)
+            node = KeywordBuiltin(token, b'break')
 
         elif token.type == STOP:
             self.eat(STOP)
-            node = NullaryBuiltin(token)
+            node = KeywordBuiltin(token, b'stop')
 
         elif token.type == LBL:
             self.eat(LBL)
-            if self.current_token.type == INTEGER:
+            if self.current_token.type == NUMBER:
                 node = Label(self.num())
             else:
                 node = Label(self.variable())
 
         elif token.type == GOTO:
             self.eat(GOTO)
-            if self.current_token.type == INTEGER:
+            if self.current_token.type == NUMBER:
                 node = Goto(self.num())
             else:
                 node = Goto(self.variable())
@@ -966,36 +1118,26 @@ class Parser(object):
 
         elif token.type == PROG:
             self.eat(PROG)
-            node = UnaryBuiltin(token, self.string_literal())
+            node = UnaryBuiltin(token, b'Prog', self.string_literal())
 
         elif token.type == DSZ:
             self.eat(DSZ)
-            node = UnaryBuiltin(token, self.factor_ref())
+            node = UnaryBuiltin(token, b'Dsz', self.factor_ref())
 
         elif token.type == ISZ:
             self.eat(ISZ)
-            node = UnaryBuiltin(token, self.factor_ref())
+            node = UnaryBuiltin(token, b'Isz', self.factor_ref())
 
         elif token.type == STOPICT:
             self.eat(STOPICT)
-            node = UnaryBuiltin(token, self.num_limited(1, 20))
+            node = UnaryBuiltin(token, b'StoPict', self.num_limited(1, 20))
 
         elif token.type == RCLPICT:
             self.eat(RCLPICT)
-            node = UnaryBuiltin(token, self.num_limited(1, 20))
+            node = UnaryBuiltin(token, b'RclPict', self.num_limited(1, 20))
 
         elif token.type == TEXT:
-            self.eat(TEXT)
-            arg1 = self.expr()
-            self.eat(COMMA)
-            arg2 = self.expr()
-            self.eat(COMMA)
-            arg3 = None
-            if self.current_token.type == STRING:
-                arg3 = self.string_literal()
-            else:
-                arg3 = self.expr()
-            node = TernaryBuiltin(token, arg1, arg2, arg3)
+            node = self.text(token)
 
         elif token.type == LOCATE:
             self.eat(LOCATE)
@@ -1008,7 +1150,7 @@ class Parser(object):
                 arg3 = self.string_literal()
             else:
                 arg3 = self.expr()
-            node = TernaryBuiltin(token, arg1, arg2, arg3)
+            node = TernaryBuiltin(token, b'Locate', arg1, arg2, arg3)
 
         elif token.type == FLINE:
             self.eat(FLINE)
@@ -1019,7 +1161,7 @@ class Parser(object):
             arg3 = self.expr()
             self.eat(COMMA)
             arg4 = self.expr()
-            node = QuaternaryBuiltin(token, arg1, arg2, arg3, arg4)
+            node = QuaternaryBuiltin(token, b'F_Line', arg1, arg2, arg3, arg4)
 
         elif token.type == CIRCLE:
             self.eat(CIRCLE)
@@ -1028,43 +1170,43 @@ class Parser(object):
             arg2 = self.expr()
             self.eat(COMMA)
             arg3 = self.expr()
-            node = TernaryBuiltin(token, arg1, arg2, arg3)
+            node = TernaryBuiltin(token, b'Circle', arg1, arg2, arg3)
 
         elif token.type == HORIZONTAL:
             self.eat(HORIZONTAL)
-            node = UnaryBuiltin(token, self.expr())
+            node = UnaryBuiltin(token, b'Horizontal', self.expr())
 
         elif token.type == PLOTON:
             self.eat(PLOTON)
             arg1 = self.expr()
             self.eat(COMMA)
             arg2 = self.expr()
-            node = BinaryBuiltin(token, arg1, arg2)
+            node = BinaryBuiltin(token, b'PlotOn', arg1, arg2)
 
         elif token.type == GRAPHYEQ:
             self.eat(GRAPHYEQ)
-            node = UnaryBuiltin(token, self.expr())
+            node = UnaryBuiltin(token, b'GraphYEq', self.expr())
 
         elif token.type == PXLON:
             self.eat(PXLON)
             arg1 = self.expr()
             self.eat(COMMA)
             arg2 = self.expr()
-            node = BinaryBuiltin(token, arg1, arg2)
+            node = BinaryBuiltin(token, b'PxlOn', arg1, arg2)
 
         elif token.type == PXLOFF:
             self.eat(PXLOFF)
             arg1 = self.expr()
             self.eat(COMMA)
             arg2 = self.expr()
-            node = BinaryBuiltin(token, arg1, arg2)
+            node = BinaryBuiltin(token, b'PxlOff', arg1, arg2)
 
         elif token.type == PXLCHG:
             self.eat(PXLCHG)
             arg1 = self.expr()
             self.eat(COMMA)
             arg2 = self.expr()
-            node = BinaryBuiltin(token, arg1, arg2)
+            node = BinaryBuiltin(token, b'PxlChg', arg1, arg2)
 
         elif token.type == VIEWWINDOW:
             self.eat(VIEWWINDOW)
@@ -1079,7 +1221,7 @@ class Parser(object):
             arg5 = self.expr()
             self.eat(COMMA)
             arg6 = self.expr()
-            node = SenaryBuiltin(token, arg1, arg2, arg3, arg4, arg5, arg6)
+            node = SenaryBuiltin(token, b'ViewWindow', arg1, arg2, arg3, arg4, arg5, arg6)
 
         elif token.type == LBRACE:
             node = self.initialize_memory()
@@ -1132,25 +1274,6 @@ class Parser(object):
         statement = self.statement()
         if statement:
             root.if_clause.append(statement)
-        return root
-
-    def for_to(self):
-        self.eat(FOR)
-        start = self.expr()
-        self.eat(ASSIGN)
-        var = self.factor_ref()
-        self.eat(TO)
-        end = self.expr()
-        step = Num(Token(INTEGER, 1.0))
-        if self.current_token.type == STEP:
-            self.eat(STEP)
-            step = self.expr()
-        self.eat(SEMI)
-        root = ForTo(start, end, step, var)
-        nodes = self.statement_list()
-        for node in nodes:
-            root.children.append(node)
-        self.eat(NEXT)
         return root
 
     def while_loop(self):
@@ -1234,12 +1357,12 @@ class Parser(object):
 
     def num(self):
         node = Num(self.current_token)
-        self.eat(INTEGER)
+        self.eat(NUMBER)
         return node
 
     def num_limited(self, lower, upper):
         node = Num(self.current_token)
-        self.eat(INTEGER)
+        self.eat(NUMBER)
         if node.value < lower or node.value > upper:
             self.error()
         return node
@@ -1297,7 +1420,7 @@ class Parser(object):
         #    node = self.condition()
         #    self.eat(RPAREN)
         #    return node
-        
+
         left = self.expr()
         token = self.current_token
 
@@ -1313,7 +1436,7 @@ class Parser(object):
             self.eat(GTE)
         else:
             self.eat(LTE)
-        
+
         node = BinOp(left=left, op=token, right=self.expr())
         return node
 
@@ -1385,20 +1508,20 @@ class Parser(object):
             self.eat(MINUS)
             node = UnaryOp(token, self.factor())
             return node
-        elif token.type == INTEGER:
-            self.eat(INTEGER)
+        elif token.type == NUMBER:
+            self.eat(NUMBER)
             return Num(token)
         elif token.type == RANDNUM:
             self.eat(RANDNUM)
-            node = NullaryFunc(token)
+            node = NullaryFunc(token, b'RandNum')
             return node
         elif token.type == PROMPT:
             self.eat(PROMPT)
-            node = NullaryFunc(token)
+            node = NullaryFunc(token, b'Prompt')
             return node
         elif token.type == GETKEY:
             self.eat(GETKEY)
-            node = NullaryFunc(token)
+            node = NullaryFunc(token, b'GetKey')
             return node
         elif token.type == PXLTEST:
             self.eat(PXLTEST)
@@ -1406,19 +1529,19 @@ class Parser(object):
             self.eat(COMMA)
             arg2 = self.expr()
             self.eat(RPAREN)
-            node = BinaryFunc(token, arg1, arg2)
+            node = BinaryFunc(token, b'PxlText', arg1, arg2)
             return node
         elif token.type == LOG:
             self.eat(LOG)
-            node = UnaryFunc(token, self.term_shorthand())
+            node = UnaryFunc(token, b'Log', self.term_shorthand())
             return node
         elif token.type == INTG:
             self.eat(INTG)
-            node = UnaryFunc(token, self.term_shorthand())
+            node = UnaryFunc(token, b'Intg', self.term_shorthand())
             return node
         elif token.type == FRAC:
             self.eat(FRAC)
-            node = UnaryFunc(token, self.term_shorthand())
+            node = UnaryFunc(token, b'Frac', self.term_shorthand())
             return node
         elif token.type == LPAREN:
             self.eat(LPAREN)
@@ -1456,3 +1579,83 @@ class Parser(object):
             self.error()
 
         return node
+
+
+class G1mParser(Parser):
+    '''
+    G1M has different syntax from UCB, but parses to the same AST tree.
+    '''
+    def for_to(self):
+        self.eat(FOR)
+        start = self.expr()
+        self.eat(ASSIGN)
+        var = self.factor_ref()
+        self.eat(TO)
+        end = self.expr()
+        step = Num(Token(NUMBER, 1.0))
+        if self.current_token.type == STEP:
+            self.eat(STEP)
+            step = self.expr()
+        self.eat(SEMI)
+        root = ForTo(start, end, step, var)
+        nodes = self.statement_list()
+        for node in nodes:
+            root.children.append(node)
+        self.eat(NEXT)
+        return root
+
+
+    def text(self, token):
+        self.eat(TEXT)
+        arg1 = self.expr()
+        self.eat(COMMA)
+        arg2 = self.expr()
+        self.eat(COMMA)
+        arg3 = None
+        if self.current_token.type == STRING:
+            arg3 = self.string_literal()
+        else:
+            arg3 = self.expr()
+        return TernaryBuiltin(token, b'Text', arg1, arg2, arg3)
+
+
+class UcbParser(Parser):
+    '''
+    UCB has different syntax from G1M, but parses to the same AST tree.
+    '''
+    def for_to(self):
+        self.eat(FOR)
+        self.eat(LPAREN)
+        var = self.factor_ref()
+        self.eat(ASSIGN)
+        start = self.expr()
+        self.eat(TO)
+        end = self.expr()
+        step = Num(Token(NUMBER, 1.0))
+        if self.current_token.type == STEP:
+            self.eat(STEP)
+            step = self.expr()
+        self.eat(RPAREN)
+        self.eat(LBRACE)
+        root = ForTo(start, end, step, var)
+        nodes = self.statement_list()
+        for node in nodes:
+            root.children.append(node)
+        self.eat(RBRACE)
+        return root
+
+
+    def text(self, token):
+        self.eat(TEXT)
+        self.eat(LPAREN)
+        arg1 = self.expr()
+        self.eat(COMMA)
+        arg2 = self.expr()
+        self.eat(COMMA)
+        arg3 = None
+        if self.current_token.type == STRING:
+            arg3 = self.string_literal()
+        else:
+            arg3 = self.expr()
+        self.eat(RPAREN)
+        return TernaryBuiltin(token, b'Text', arg1, arg2, arg3)

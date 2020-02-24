@@ -540,6 +540,16 @@ class CasioMachine(NodeVisitor):
         else:
             raise Exception('Unknown UnaryFunc op type: {}'.format(node.op.type))
 
+    def _visit_KeywordBuiltin(self, node):
+        if node.op.type == BREAK:
+            raise ControlLoopBreakException()
+        elif node.op.type == RETURN:
+            raise SubroutineReturnException()
+        elif node.op.type == STOP:
+            raise ProgramStopException()
+        else:
+            raise Exception('Unknown KeywordBuiltin op type: {}'.format(node.op.type))
+
     def _visit_NullaryBuiltin(self, node):
         if node.op.type == CLS:
             self._render_begin(self.texture_graph)

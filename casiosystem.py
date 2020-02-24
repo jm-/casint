@@ -8,6 +8,9 @@ NUM_TEXT_ROWS = 6
 
 
 class ProgramMenu(object):
+    # todo: could subclass CasioMachine as CasioSystem
+    # - access to 'protected' vars and methods
+    # - could add other system utilities
     def __init__(self, casio, programs):
         self.casio = casio
         self.programs = programs
@@ -32,7 +35,7 @@ class ProgramMenu(object):
                 locate(self.casio.renderer, self.casio.font_text, 2, i+2, program.name)
             i += 1
         self.casio._render_end()
-    
+
     def show(self):
         self.selection = 0
         self.offset = 0
@@ -59,7 +62,7 @@ class ProgramMenu(object):
                     self.offset = 0
                 elif (self.selection-self.offset) >= NUM_TEXT_ROWS:
                     self.offset += 1
-        
+
         self.casio._render_begin(self.casio.texture_graph)
         self.casio._clear_screen()
         self.casio._render_end()

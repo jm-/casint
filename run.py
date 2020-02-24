@@ -11,17 +11,23 @@ except ImportError:
         os.environ['PYSDL2_DLL_PATH'] = 'lib/32' if arch == '32bit' else 'lib/64'
     import sdl2
 
-from decoder import G1mFile, CasioProgram
+from decoder import load_programs_from_ucb_dir, load_programs_from_g1m_file
 from machine import CasioMachine, InterpreterQuitException
 from casiosystem import ProgramMenu
 
 
-def main(filepath):
-    g1mfile = G1mFile(filepath, debug=False)
-
-    print(f'Processing G1M file: {filepath}')
-    programs = g1mfile.load()
-    num_programs = len(programs)
+def main(path):
+    # if the path is a dir, load programs from ucb.
+    # else, read as g1m.
+    if os.path.isfile(path):
+        print(f'Processing G1M file: {path}')
+        programs = load_programs_from_g1m_file(path)
+    elif os.path.isdir(path):
+        print(f'Processing UCB dir: {path}')
+        programs = load_programs_from_ucb_dir(path)
+    else:
+        print('Could not load programs: unknown input')
+        return 2
 
     with CasioMachine(programs) as casio:
         menu = ProgramMenu(casio, programs)
