@@ -10,7 +10,8 @@
             "request": "launch",
             "program": "${workspaceFolder}/run.py",
             "args": [
-                "input/captures/MAW~MIND.g1m"
+                "input/captures/MAW~MIND.g1m",
+                "MAW~MIND"
             ],
             "cwd": "${workspaceFolder}",
             "console": "integratedTerminal"
@@ -21,7 +22,8 @@
             "request": "launch",
             "program": "${workspaceFolder}/run.py",
             "args": [
-                "output/maw-mind"
+                "output/maw-mind",
+                "MAW~MIND"
             ],
             "cwd": "${workspaceFolder}",
             "console": "integratedTerminal"

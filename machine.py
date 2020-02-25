@@ -227,7 +227,8 @@ class CasioMachine(NodeVisitor):
         sdl2.SDL_RenderPresent(self.renderer)
 
     def _set_window_title(self, name):
-        sdl2.SDL_SetWindowTitle(self.window, name + b' - CASINT: CASIO Basic Interpreter')
+        window_name = f'{name} - CASINT: CASIO Basic Interpreter'.encode()
+        sdl2.SDL_SetWindowTitle(self.window, window_name)
 
     def _handle_windowevents(self, event):
         if event.window.event == sdl2.SDL_WINDOWEVENT_RESIZED:
@@ -279,7 +280,7 @@ class CasioMachine(NodeVisitor):
 
     def run(self, name):
         program = self.programs.get(name)
-        self._set_window_title(program.get_printable_name())
+        self._set_window_title(program.stringname)
         try:
             self._visit(program.tree)
         except ProgramStopException:

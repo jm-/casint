@@ -1,4 +1,5 @@
 from common import *
+from ast import *
 
 
 class LexerException(Exception):
@@ -57,7 +58,7 @@ class Lexer():
         raise LexerException(
             f'Invalid character:'
             f' pos={self.pos}'
-            f' chrs={self.text[self.pos:self.pos+5]}'
+            f' chrs={self.text[self.pos:self.pos+20]}'
         )
 
 
@@ -97,933 +98,6 @@ class Lexer():
         token = self.get_next_token()
         self.seek(pos)
         return token
-
-
-class G1mLexer(Lexer):
-    def numeric(self):
-        """Return a (multidigit) integer consumed from the input."""
-        result = b''
-        while self.current_char is not None and is_numeric(self.current_char):
-            result += self.current_char
-            self.advance()
-        #print(f'numeric: {result}')
-        return parse_word_as_number(result)
-
-
-    def string(self):
-        result = b''
-        self.advance()
-        while self.current_char is not None and self.current_char != b'"':
-            result += self.current_char
-            self.advance()
-        self.advance()
-        #print(f'string lit: {result}')
-        return result
-
-
-    def comment(self):
-        result = b''
-        while self.current_char is not None and self.current_char not in (b':', b'\x0d'):
-            result += self.current_char
-            self.advance()
-        return result
-
-
-    def get_next_token(self):
-        """Lexical analyzer (also known as scanner or tokenizer)
-        This method is responsible for breaking a sentence
-        apart into tokens. One token at a time.
-        """
-        while self.current_char is not None:
-            #print(f'{self.current_char}')
-
-            if self.current_char == b'\xd1':
-                self.advance()
-                return Token(CLS, b'Cls')
-
-            if self.current_char == b'\xe8':
-                self.advance()
-                return Token(DSZ, b'Dsz ')
-
-            if self.current_char == b'\xe9':
-                self.advance()
-                return Token(ISZ, b'Isz ')
-
-            if self.current_char == b'\xeb':
-                self.advance()
-                return Token(VIEWWINDOW, b'ViewWindow')
-
-            if self.current_char == b'\xec':
-                self.advance()
-                return Token(GOTO, b'Goto ')
-
-            if self.current_char == b'\xed':
-                self.advance()
-                return Token(PROG, b'Prog')
-
-            if self.current_char == b'\xee':
-                self.advance()
-                return Token(GRAPHYEQ, b'Graph Y=')
-
-            if self.current_char == b'\xe2':
-                self.advance()
-                return Token(LBL, b'Lbl ')
-
-            if self.current_char == b'\x95':
-                self.advance()
-                return Token(LOG, b'log ')
-
-            if self.current_char == b'\xde':
-                self.advance()
-                return Token(INTG, b'Intg ')
-
-            if self.current_char == b'\xb6':
-                self.advance()
-                return Token(FRAC, b'Frac ')
-
-            if self.current_char == b'\xc1':
-                self.advance()
-                return Token(RANDNUM, b'Ran# ')
-
-            if self.current_char == b'\x7f' and self.peek() == b'\x40':
-                self.advance()
-                self.advance()
-                return Token(MAT, b'Mat ')
-
-            if self.current_char == b'\x7f' and self.peek() == b'\x46':
-                self.advance()
-                self.advance()
-                return Token(DIM, b'Dim')
-
-            if self.current_char == b'\x7f' and self.peek() == b'\x8f':
-                self.advance()
-                self.advance()
-                return Token(GETKEY, b'Getkey')
-
-            if self.current_char == b'\x7f' and self.peek() == b'\xb0':
-                self.advance()
-                self.advance()
-                return Token(AND, b' And ')
-
-            if self.current_char == b'\x7f' and self.peek() == b'\xb1':
-                self.advance()
-                self.advance()
-                return Token(OR, b' Or ')
-
-            if self.current_char == b'\xf7' and self.peek() == b'\x00':
-                self.advance()
-                self.advance()
-                return Token(IF, b'If ')
-
-            if self.current_char == b'\xf7' and self.peek() == b'\x01':
-                self.advance()
-                self.advance()
-                return Token(THEN, b'Then ')
-
-            if self.current_char == b'\xf7' and self.peek() == b'\x02':
-                self.advance()
-                self.advance()
-                return Token(ELSE, b'Else')
-
-            if self.current_char == b'\xf7' and self.peek() == b'\x03':
-                self.advance()
-                self.advance()
-                return Token(IFEND, b'IfEnd')
-
-            if self.current_char == b'\xf7' and self.peek() == b'\x04':
-                self.advance()
-                self.advance()
-                return Token(FOR, b'For ')
-
-            if self.current_char == b'\xf7' and self.peek() == b'\x05':
-                self.advance()
-                self.advance()
-                return Token(TO, b'To ')
-
-            if self.current_char == b'\xf7' and self.peek() == b'\x06':
-                self.advance()
-                self.advance()
-                return Token(STEP, b'Step ')
-
-            if self.current_char == b'\xf7' and self.peek() == b'\x07':
-                self.advance()
-                self.advance()
-                return Token(NEXT, b'Next')
-
-            if self.current_char == b'\xf7' and self.peek() == b'\x08':
-                self.advance()
-                self.advance()
-                return Token(WHILE, b'While ')
-
-            if self.current_char == b'\xf7' and self.peek() == b'\x09':
-                self.advance()
-                self.advance()
-                return Token(WHILEEND, b'WhileEnd')
-
-            if self.current_char == b'\xf7' and self.peek() == b'\x0a':
-                self.advance()
-                self.advance()
-                return Token(DO, b'Do')
-
-            if self.current_char == b'\xf7' and self.peek() == b'\x0b':
-                self.advance()
-                self.advance()
-                return Token(LPWHILE, b'LpWhile ')
-
-            if self.current_char == b'\xf7' and self.peek() == b'\x0c':
-                self.advance()
-                self.advance()
-                return Token(RETURN, b'Return')
-
-            if self.current_char == b'\xf7' and self.peek() == b'\x0d':
-                self.advance()
-                self.advance()
-                return Token(BREAK, b'Break')
-
-            if self.current_char == b'\xf7' and self.peek() == b'\x0e':
-                self.advance()
-                self.advance()
-                return Token(STOP, b'Stop')
-
-            if self.current_char == b'\xf7' and self.peek() == b'\x10':
-                self.advance()
-                self.advance()
-                return Token(LOCATE, b'Locate ')
-
-            if self.current_char == b'\xf7' and self.peek() == b'\x18':
-                self.advance()
-                self.advance()
-                return Token(CLRTEXT, b'ClrText')
-
-            if self.current_char == b'\xf7' and self.peek() == b'\x93':
-                self.advance()
-                self.advance()
-                return Token(STOPICT, b'StoPict ')
-
-            if self.current_char == b'\xf7' and self.peek() == b'\x94':
-                self.advance()
-                self.advance()
-                return Token(RCLPICT, b'RclPict ')
-
-            if self.current_char == b'\xf7' and self.peek() == b'\xa4':
-                self.advance()
-                self.advance()
-                return Token(HORIZONTAL, b'Horizontal ')
-
-            if self.current_char == b'\xf7' and self.peek() == b'\xa5':
-                self.advance()
-                self.advance()
-                return Token(TEXT, b'Text ')
-
-            if self.current_char == b'\xf7' and self.peek() == b'\xa6':
-                self.advance()
-                self.advance()
-                return Token(CIRCLE, b'Circle ')
-
-            if self.current_char == b'\xf7' and self.peek() == b'\xa7':
-                self.advance()
-                self.advance()
-                return Token(FLINE, b'F-Line ')
-
-            if self.current_char == b'\xf7' and self.peek() == b'\xa8':
-                self.advance()
-                self.advance()
-                return Token(PLOTON, b'PlotOn ')
-
-            if self.current_char == b'\xf7' and self.peek() == b'\xab':
-                self.advance()
-                self.advance()
-                return Token(PXLON, b'PxlOn ')
-
-            if self.current_char == b'\xf7' and self.peek() == b'\xac':
-                self.advance()
-                self.advance()
-                return Token(PXLOFF, b'PxlOff ')
-
-            if self.current_char == b'\xf7' and self.peek() == b'\xad':
-                self.advance()
-                self.advance()
-                return Token(PXLCHG, b'PxlChg ')
-
-            if self.current_char == b'\xf7' and self.peek() == b'\xaf':
-                self.advance()
-                self.advance()
-                return Token(PXLTEST, b'PxlTest(')
-
-            if self.current_char == b'\xf7' and self.peek() == b'\xd3':
-                self.advance()
-                self.advance()
-                return Token(COORDOFF, b'CoordOff')
-
-            if self.current_char == b'\xf7' and self.peek() == b'\x7a':
-                self.advance()
-                self.advance()
-                return Token(GRIDOFF, b'GridOff')
-
-            if self.current_char == b'\xf7' and self.peek() == b'\xd2':
-                self.advance()
-                self.advance()
-                return Token(AXESOFF, b'AxesOff')
-
-            if self.current_char == b'\xf7' and self.peek() == b'\xd4':
-                self.advance()
-                self.advance()
-                return Token(LABELOFF, b'LabelOff')
-
-            if self.current_char == b',':
-                self.advance()
-                return Token(COMMA, b',')
-
-            if self.current_char == b':':
-                self.advance()
-                return Token(SEMI, b':')
-
-            if self.current_char == b'=':
-                self.advance()
-                return Token(EQ, b'==')
-
-            if self.current_char == b'\x10':
-                self.advance()
-                return Token(LTE, b'<=')
-
-            if self.current_char == b'\x12':
-                self.advance()
-                return Token(GTE, b'>=')
-
-            if self.current_char == b'\x11':
-                self.advance()
-                return Token(NEQ, b'!=')
-
-            if self.current_char == b'\x3c':
-                self.advance()
-                return Token(LT, b'<')
-
-            if self.current_char == b'\x3e':
-                self.advance()
-                return Token(GT, b'>')
-
-            if self.current_char == b'\x13':
-                self.advance()
-                return Token(INLINEIF, b'=>')
-
-            if self.current_char == b'\x0c':
-                self.advance()
-                return Token(DISP, b'DISP')
-
-            if self.current_char == b'\x0d':
-                self.advance()
-                return Token(SEMI, b'EOL')
-
-            if self.current_char == b'?':
-                self.advance()
-                return Token(PROMPT, b'?')
-
-            if self.current_char == b'\x0e':
-                self.advance()
-                return Token(ASSIGN, b'->')
-
-            if is_variable(self.current_char):
-                token = Token(VARIABLE, self.current_char)
-                self.advance()
-                return token
-
-            if is_numeric(self.current_char):
-                return Token(NUMBER, self.numeric())
-
-            if self.current_char == b'"':
-                return Token(STRING, self.string())
-
-            if self.current_char == b'\'':
-                return Token(COMMENT, self.comment())
-
-            if self.current_char == b'\x89':
-                self.advance()
-                return Token(PLUS, b'+')
-
-            if self.current_char in (b'\x99', b'\x87'):
-                self.advance()
-                return Token(MINUS, b'-')
-
-            if self.current_char == b'\xa9':
-                self.advance()
-                return Token(MUL, b'x')
-
-            if self.current_char == b'\xb9':
-                self.advance()
-                return Token(DIV, b'/')
-
-            if self.current_char == b'\xa6':
-                self.advance()
-                return Token(INTG, b'Int ')
-
-            if self.current_char == b'\xa8':
-                self.advance()
-                return Token(POWER, b'^')
-
-            if self.current_char == b'\x8b':
-                self.advance()
-                return Token(SQUARED, b'^2')
-
-            if self.current_char == b'(':
-                self.advance()
-                return Token(LPAREN, b'(')
-
-            if self.current_char == b')':
-                self.advance()
-                return Token(RPAREN, b')')
-
-            if self.current_char == b'{':
-                self.advance()
-                return Token(LBRACE, b'{')
-
-            if self.current_char == b'}':
-                self.advance()
-                return Token(RBRACE, b'}')
-
-            if self.current_char == b'[':
-                self.advance()
-                return Token(LBRACKET, b'[')
-
-            if self.current_char == b']':
-                self.advance()
-                return Token(RBRACKET, b']')
-
-            if self.current_char == b'~':
-                self.advance()
-                return Token(VARIABLERANGE, b'~')
-
-            self.error()
-
-        return Token(EOF, None)
-
-
-class UcbLexer(Lexer):
-    def string(self):
-        result = b''
-        self.advance()
-        while self.current_char is not None and self.current_char != b'"':
-            result += self.current_char
-            self.advance()
-        self.advance()
-        return result
-
-
-    def ucb_word(self):
-        result = b''
-        while self.current_char is not None and is_ucb_word_character(self.current_char):
-            result += self.current_char
-            self.advance()
-        return result
-
-
-    def get_next_token(self):
-        while self.current_char is not None:
-            print(f'{self.current_char}')
-
-            if self.current_char in (b' ', b'\n'):
-                # ignore whitespace
-                self.advance()
-                continue
-
-            if is_ucb_word_character(self.current_char):
-                word = self.ucb_word()
-                print(f'word: {word}')
-
-                if word == b'if':
-                    return Token(IF, b'If ')
-
-                if word == b'else':
-                    return Token(ELSE, b'Else')
-
-                if word == b'for':
-                    return Token(FOR, b'For ')
-
-                if word == b'to':
-                    return Token(TO, b'To ')
-
-                if word == b'step':
-                    return Token(STEP, b'Step ')
-
-                if word == b'Text':
-                    return Token(TEXT, b'Text ')
-
-                if word == b'F_Line':
-                    return Token(FLINE, b'F-Line ')
-
-                if word == b'ViewWindow':
-                    return Token(VIEWWINDOW, b'ViewWindow')
-
-                if len(word) == 1 and is_variable(word):
-                    return Token(VARIABLE, word)
-
-                if is_numeric(word[0]):
-                    return Token(NUMBER, parse_word_as_number(word))
-
-                else:
-                    self.error()
-
-            if self.current_char == b'"':
-                return Token(STRING, self.string())
-
-            if self.current_char == b',':
-                self.advance()
-                return Token(COMMA, b',')
-
-            if self.current_char == b';':
-                self.advance()
-                return Token(SEMI, b'EOL')
-
-            if self.current_char == b'=':
-                self.advance()
-                if self.peek() == b'=':
-                    self.advance()
-                    return Token(EQ, b'==')
-                return Token(ASSIGN, b'->')
-
-            if self.current_char == b'<':
-                self.advance()
-                if self.peek() == b'=':
-                    self.advance()
-                    return Token(LTE, b'<=')
-                return Token(LT, b'<')
-
-            if self.current_char == b'>':
-                self.advance()
-                if self.peek() == b'=':
-                    self.advance()
-                    return Token(GTE, b'>=')
-                return Token(GT, b'>')
-
-            if self.current_char == b'+':
-                self.advance()
-                return Token(PLUS, b'+')
-
-            if self.current_char == b'-':
-                self.advance()
-                return Token(MINUS, b'-')
-
-            if self.current_char == b'*':
-                self.advance()
-                return Token(MUL, b'x')
-
-            if self.current_char == b'/':
-                self.advance()
-                return Token(DIV, b'/')
-
-            if self.current_char == b'(':
-                self.advance()
-                return Token(LPAREN, b'(')
-
-            if self.current_char == b')':
-                self.advance()
-                return Token(RPAREN, b')')
-
-            if self.current_char == b'{':
-                self.advance()
-                return Token(LBRACE, b'{')
-
-            if self.current_char == b'}':
-                self.advance()
-                return Token(RBRACE, b'}')
-
-            if self.current_char == b'[':
-                self.advance()
-                return Token(LBRACKET, b'[')
-
-            if self.current_char == b']':
-                self.advance()
-                return Token(RBRACKET, b']')
-
-            self.error()
-
-        return Token(EOF, None)
-
-
-class AST(object):
-    pass
-
-
-class MemoryStructure(AST):
-    def __init__(self, op, token):
-        self.op = op
-        self.value = token.value
-
-    def write_ucb(self, fp, indent):
-        fp.write(self.op.value)
-        fp.write(self.value)
-
-
-class MemoryIndex(AST):
-    """e.g. Mat A[1, 1]"""
-    def __init__(self, left, right):
-        self.left = left
-        self.right = right
-
-    def write_ucb(self, fp, indent):
-        self.left.write_ucb(fp, indent)
-        fp.write(b'[')
-        self.right[0].write_ucb(fp, indent)
-        fp.write(b', ')
-        self.right[1].write_ucb(fp, indent)
-        fp.write(b']')
-
-
-class BinOp(AST):
-    def __init__(self, left, op, right):
-        self.left = left
-        self.op = op
-        self.right = right
-
-    def write_ucb(self, fp, indent):
-        self.left.write_ucb(fp, indent)
-        fp.write(b' ')
-        fp.write(self.op.value)
-        fp.write(b' ')
-        self.right.write_ucb(fp, indent)
-
-
-class Num(AST):
-    def __init__(self, token):
-        self.value = token.value
-
-    def write_ucb(self, fp, indent):
-        val = self.value
-        if type(val) is float and val.is_integer():
-            val = int(val)
-        fp.write(bytes(str(val), 'ascii'))
-
-
-class StringLit(AST):
-    def __init__(self, token):
-        self.value = token.value
-
-    def write_ucb(self, fp, indent):
-        fp.write(b'"')
-        fp.write(translate_string_literal(self.value))
-        fp.write(b'"')
-
-
-class Var(AST):
-    def __init__(self, token):
-        self.value = token.value
-
-    def write_ucb(self, fp, indent):
-        fp.write(self.value)
-
-
-class UnaryOp(AST):
-    def __init__(self, op, expr):
-        self.op = op
-        self.expr = expr
-
-    def write_ucb(self, fp, indent):
-        fp.write(self.op.value)
-        self.expr.write_ucb(fp, indent)
-
-
-class Program(AST):
-    def __init__(self):
-        self.children = []
-
-    def write_ucb(self, fp, indent):
-        for child in self.children:
-            child.write_ucb(fp, indent)
-
-
-class IfThen(AST):
-    def __init__(self, condition):
-        self.condition = condition
-        self.if_clause = []
-        self.else_clause = []
-
-    def write_ucb(self, fp, indent):
-        fp.write(b'if (')
-        self.condition.write_ucb(fp, indent)
-        fp.write(b') {\n')
-        for child in self.if_clause:
-            fp.write(b' ' * UCB_INDENTATION * (indent + 1))
-            child.write_ucb(fp, indent + 1)
-        if self.else_clause:
-            fp.write(b' ' * UCB_INDENTATION * (indent))
-            fp.write(b'} else {\n')
-            for child in self.else_clause:
-                fp.write(b' ' * UCB_INDENTATION * (indent + 1))
-                child.write_ucb(fp, indent)
-        fp.write(b' ' * UCB_INDENTATION * (indent))
-        fp.write(b'}\n')
-
-
-class ForTo(AST):
-    def __init__(self, start, end, step, var):
-        self.start = start
-        self.end = end
-        self.step = step
-        self.var = var
-        self.children = []
-
-    def write_ucb(self, fp, indent):
-        fp.write(b'for (')
-        self.var.write_ucb(fp, indent)
-        fp.write(b' = ')
-        self.start.write_ucb(fp, indent)
-        fp.write(b' to ')
-        self.end.write_ucb(fp, indent)
-        if self.step:
-            fp.write(b' step ')
-            self.step.write_ucb(fp, indent)
-        fp.write(b') {\n')
-        for child in self.children:
-            fp.write(b' ' * UCB_INDENTATION * (indent + 1))
-            child.write_ucb(fp, indent + 1)
-        fp.write(b' ' * UCB_INDENTATION * (indent))
-        fp.write(b'}\n')
-
-
-class WhileLoop(AST):
-    def __init__(self):
-        self.condition = None
-        self.children = []
-
-    def write_ucb(self, fp, indent):
-        fp.write(b'while (')
-        self.condition.write_ucb(fp, indent)
-        fp.write(b') {\n')
-        for child in self.children:
-            fp.write(b' ' * UCB_INDENTATION * (indent + 1))
-            child.write_ucb(fp, indent + 1)
-        fp.write(b' ' * UCB_INDENTATION * (indent))
-        fp.write(b'}\n')
-
-
-class DoLpWhile(AST):
-    def __init__(self):
-        self.children = []
-        self.condition = None
-
-    def write_ucb(self, fp, indent):
-        fp.write(b'do {\n')
-        for child in self.children:
-            fp.write(b' ' * UCB_INDENTATION * (indent + 1))
-            child.write_ucb(fp, indent + 1)
-        fp.write(b' ' * UCB_INDENTATION * (indent))
-        fp.write(b'} while (')
-        self.condition.write_ucb(fp, indent)
-        fp.write(b');\n')
-
-
-class KeywordBuiltin(AST):
-    def __init__(self, op, name):
-        self.op = op
-        self.name = name
-
-    def write_ucb(self, fp, indent):
-        fp.write(self.name)
-        fp.write(b';\n')
-
-
-class NullaryBuiltin(AST):
-    def __init__(self, op, name):
-        self.op = op
-        self.name = name
-
-    def write_ucb(self, fp, indent):
-        fp.write(self.name)
-        fp.write(b'();\n')
-
-
-class NullaryFunc(AST):
-    def __init__(self, op, name):
-        self.op = op
-        self.name = name
-
-    def write_ucb(self, fp, indent):
-        fp.write(self.name)
-        fp.write(b'()')
-
-
-class UnaryBuiltin(AST):
-    def __init__(self, op, name, arg1):
-        self.op = op
-        self.name = name
-        self.arg1 = arg1
-
-    def write_ucb(self, fp, indent):
-        fp.write(self.name)
-        fp.write(b'(')
-        self.arg1.write_ucb(fp, indent)
-        fp.write(b');\n')
-
-
-class UnaryFunc(AST):
-    def __init__(self, op, name, arg1):
-        self.op = op
-        self.name = name
-        self.arg1 = arg1
-
-    def write_ucb(self, fp, indent):
-        fp.write(self.name)
-        fp.write(b'(')
-        self.arg1.write_ucb(fp, indent)
-        fp.write(b')')
-
-
-class BinaryBuiltin(AST):
-    def __init__(self, op, name, arg1, arg2):
-        self.op = op
-        self.name = name
-        self.arg1 = arg1
-        self.arg2 = arg2
-
-    def write_ucb(self, fp, indent):
-        fp.write(self.name)
-        fp.write(b'(')
-        self.arg1.write_ucb(fp, indent)
-        fp.write(b', ')
-        self.arg2.write_ucb(fp, indent)
-        fp.write(b');\n')
-
-
-class BinaryFunc(AST):
-    def __init__(self, op, name, arg1, arg2):
-        self.op = op
-        self.name = name
-        self.arg1 = arg1
-        self.arg2 = arg2
-
-    def write_ucb(self, fp, indent):
-        fp.write(self.name)
-        fp.write(b'(')
-        self.arg1.write_ucb(fp, indent)
-        fp.write(b', ')
-        self.arg2.write_ucb(fp, indent)
-        fp.write(b')')
-
-
-class TernaryBuiltin(AST):
-    def __init__(self, op, name, arg1, arg2, arg3):
-        self.op = op
-        self.name = name
-        self.arg1 = arg1
-        self.arg2 = arg2
-        self.arg3 = arg3
-
-    def write_ucb(self, fp, indent):
-        fp.write(self.name)
-        fp.write(b'(')
-        self.arg1.write_ucb(fp, indent)
-        fp.write(b', ')
-        self.arg2.write_ucb(fp, indent)
-        fp.write(b', ')
-        self.arg3.write_ucb(fp, indent)
-        fp.write(b');\n')
-
-
-class QuaternaryBuiltin(AST):
-    def __init__(self, op, name, arg1, arg2, arg3, arg4):
-        self.op = op
-        self.name = name
-        self.arg1 = arg1
-        self.arg2 = arg2
-        self.arg3 = arg3
-        self.arg4 = arg4
-
-    def write_ucb(self, fp, indent):
-        fp.write(self.name)
-        fp.write(b'(')
-        self.arg1.write_ucb(fp, indent)
-        fp.write(b', ')
-        self.arg2.write_ucb(fp, indent)
-        fp.write(b', ')
-        self.arg3.write_ucb(fp, indent)
-        fp.write(b', ')
-        self.arg4.write_ucb(fp, indent)
-        fp.write(b');\n')
-
-
-class SenaryBuiltin(AST):
-    def __init__(self, op, name, arg1, arg2, arg3, arg4, arg5, arg6):
-        self.op = op
-        self.name = name
-        self.arg1 = arg1
-        self.arg2 = arg2
-        self.arg3 = arg3
-        self.arg4 = arg4
-        self.arg5 = arg5
-        self.arg6 = arg6
-
-    def write_ucb(self, fp, indent):
-        fp.write(self.name)
-        fp.write(b'(')
-        self.arg1.write_ucb(fp, indent)
-        fp.write(b', ')
-        self.arg2.write_ucb(fp, indent)
-        fp.write(b', ')
-        self.arg3.write_ucb(fp, indent)
-        fp.write(b', ')
-        self.arg4.write_ucb(fp, indent)
-        fp.write(b', ')
-        self.arg5.write_ucb(fp, indent)
-        fp.write(b', ')
-        self.arg6.write_ucb(fp, indent)
-        fp.write(b');\n')
-
-
-class Assign(AST):
-    def __init__(self, left, right):
-        self.left = left
-        self.right = right
-
-    def write_ucb(self, fp, indent):
-        self.right.write_ucb(fp, indent)
-        fp.write(b' = ')
-        self.left.write_ucb(fp, indent)
-        fp.write(b';\n')
-
-
-class VariableRange(AST):
-    def __init__(self, lower, upper):
-        self.lower = lower
-        self.upper = upper
-
-    def write_ucb(self, fp, indent):
-        self.lower.write_ucb(fp, indent)
-        fp.write(b'~')
-        self.upper.write_ucb(fp, indent)
-
-
-class Initialize(AST):
-    def __init__(self, left, right):
-        self.left = left
-        self.right = right
-
-    def write_ucb(self, fp, indent):
-        fp.write(b'Dim ')
-        self.right.write_ucb(fp, indent)
-        fp.write(b' = (')
-        self.left[0].write_ucb(fp, indent)
-        fp.write(b', ')
-        self.left[1].write_ucb(fp, indent)
-        fp.write(b');\n')
-
-
-class Label(AST):
-    def __init__(self, op):
-        self.op = op
-
-    def write_ucb(self, fp, indent):
-        fp.write(b'label ')
-        self.op.write_ucb(fp, indent)
-        fp.write(b';\n')
-
-
-class Goto(AST):
-    def __init__(self, op):
-        self.op = op
-
-    def write_ucb(self, fp, indent):
-        fp.write(b'goto ')
-        self.op.write_ucb(fp, indent)
-        fp.write(b';\n')
 
 
 class Parser():
@@ -1145,8 +219,7 @@ class Parser():
             node = self.do_loop_while()
 
         elif token.type == PROG:
-            self.eat(PROG)
-            node = UnaryBuiltin(token, b'Prog', self.string_literal())
+            node = self.prog(token)
 
         elif token.type == DSZ:
             self.eat(DSZ)
@@ -1157,12 +230,10 @@ class Parser():
             node = UnaryBuiltin(token, b'Isz', self.factor_ref())
 
         elif token.type == STOPICT:
-            self.eat(STOPICT)
-            node = UnaryBuiltin(token, b'StoPict', self.num_limited(1, 20))
+            node = self.stopict(token)
 
         elif token.type == RCLPICT:
-            self.eat(RCLPICT)
-            node = UnaryBuiltin(token, b'RclPict', self.num_limited(1, 20))
+            node = self.rclpict(token)
 
         elif token.type == TEXT:
             node = self.text(token)
@@ -1208,25 +279,13 @@ class Parser():
             node = UnaryBuiltin(token, b'GraphYEq', self.expr())
 
         elif token.type == PXLON:
-            self.eat(PXLON)
-            arg1 = self.expr()
-            self.eat(COMMA)
-            arg2 = self.expr()
-            node = BinaryBuiltin(token, b'PxlOn', arg1, arg2)
+            node = self.binary_builtin(token, b'PxlOn')
 
         elif token.type == PXLOFF:
-            self.eat(PXLOFF)
-            arg1 = self.expr()
-            self.eat(COMMA)
-            arg2 = self.expr()
-            node = BinaryBuiltin(token, b'PxlOff', arg1, arg2)
+            node = self.binary_builtin(token, b'PxlOff')
 
         elif token.type == PXLCHG:
-            self.eat(PXLCHG)
-            arg1 = self.expr()
-            self.eat(COMMA)
-            arg2 = self.expr()
-            node = BinaryBuiltin(token, b'PxlChg', arg1, arg2)
+            node = self.binary_builtin(token, b'PxlChg')
 
         elif token.type == VIEWWINDOW:
             node = self.senary_builtin(token, b'ViewWindow')
@@ -1275,20 +334,6 @@ class Parser():
         for node in nodes:
             root.children.append(node)
         self.eat(WHILEEND)
-        return root
-
-    def do_loop_while(self):
-        root = DoLpWhile()
-        self.eat(DO)
-        self.eat(SEMI)
-        nodes = self.statement_list()
-        for node in nodes:
-            root.children.append(node)
-        self.eat(LPWHILE)
-        if self.try_parse(self.condition):
-            root.condition = self.condition()
-        else:
-            root.condition = self.expr()
         return root
 
     def initialize_memory(self):
@@ -1374,7 +419,7 @@ class Parser():
             token = self.current_token
             self.eat(OR)
 
-            node = BinOp(left=node, op=token, right=self.and_condition())
+            node = BinOp(left=node, op=token, right=self.and_condition(), ucb_repr=b'or')
 
         return node
 
@@ -1385,7 +430,7 @@ class Parser():
             token = self.current_token
             self.eat(AND)
 
-            node = BinOp(left=node, op=token, right=self.bexp())
+            node = BinOp(left=node, op=token, right=self.bexp(), ucb_repr=b'and')
 
         return node
 
@@ -1403,21 +448,28 @@ class Parser():
 
         left = self.expr()
         token = self.current_token
+        ucb_repr = None
 
         if token.type == EQ:
             self.eat(EQ)
+            ucb_repr = b'=='
         elif token.type == NEQ:
             self.eat(NEQ)
+            ucb_repr = b'!='
         elif token.type == GT:
             self.eat(GT)
+            ucb_repr = b'>'
         elif token.type == LT:
             self.eat(LT)
+            ucb_repr = b'<'
         elif token.type == GTE:
             self.eat(GTE)
+            ucb_repr = b'>='
         else:
             self.eat(LTE)
+            ucb_repr = b'<='
 
-        node = BinOp(left=left, op=token, right=self.expr())
+        node = BinOp(left=left, op=token, right=self.expr(), ucb_repr=ucb_repr)
         return node
 
     def expr(self):
@@ -1425,12 +477,15 @@ class Parser():
 
         while self.current_token.type in (PLUS, MINUS):
             token = self.current_token
+            ucb_repr = None
             if token.type == PLUS:
                 self.eat(PLUS)
+                ucb_repr = b'+'
             elif token.type == MINUS:
                 self.eat(MINUS)
+                ucb_repr = b'-'
 
-            node = BinOp(left=node, op=token, right=self.term())
+            node = BinOp(left=node, op=token, right=self.term(), ucb_repr=ucb_repr)
 
         return node
 
@@ -1439,12 +494,15 @@ class Parser():
 
         while self.current_token.type in (MUL, DIV):
             token = self.current_token
+            ucb_repr = None
             if token.type == MUL:
                 self.eat(MUL)
+                ucb_repr = b'*'
             elif token.type == DIV:
                 self.eat(DIV)
+                ucb_repr = b'/'
 
-            node = BinOp(left=node, op=token, right=self.expo())
+            node = BinOp(left=node, op=token, right=self.expo(), ucb_repr=ucb_repr)
 
         return node
 
@@ -1453,12 +511,15 @@ class Parser():
 
         while self.current_token.type in (POWER, SQUARED):
             token = self.current_token
+            ucb_repr = None
             if token.type == POWER:
                 self.eat(POWER)
+                ucb_repr = b'**'
             if token.type == SQUARED:
                 self.eat(SQUARED)
+                ucb_repr = b'** 2'
 
-            node = BinOp(left=node, op=token, right=self.term_shorthand())
+            node = BinOp(left=node, op=token, right=self.term_shorthand(), ucb_repr=ucb_repr)
 
         return node
 
@@ -1469,10 +530,10 @@ class Parser():
             token = self.current_token
             if token.type in (RANDNUM, PROMPT, GETKEY, PXLTEST, INTG, FRAC, LPAREN):
                 token = Token(MUL, b'*')
-                node = BinOp(left=node, op=token, right=self.factor())
+                node = BinOp(left=node, op=token, right=self.factor(), ucb_repr=b'*')
             elif self.try_parse(self.factor_ref):
                 token = Token(MUL, b'*')
-                node = BinOp(left=node, op=token, right=self.factor_ref())
+                node = BinOp(left=node, op=token, right=self.factor_ref(), ucb_repr=b'*')
             else:
                 break
 
@@ -1500,16 +561,14 @@ class Parser():
             node = NullaryFunc(token, b'Prompt')
             return node
         elif token.type == GETKEY:
-            self.eat(GETKEY)
-            node = NullaryFunc(token, b'GetKey')
-            return node
+            return self.nullary_func(token, b'GetKey')
         elif token.type == PXLTEST:
             self.eat(PXLTEST)
             arg1 = self.expr()
             self.eat(COMMA)
             arg2 = self.expr()
             self.eat(RPAREN)
-            node = BinaryFunc(token, b'PxlText', arg1, arg2)
+            node = BinaryFunc(token, b'PxlTest', arg1, arg2)
             return node
         elif token.type == LOG:
             self.eat(LOG)
@@ -1558,254 +617,4 @@ class Parser():
         if self.current_token.type != EOF:
             self.error()
 
-        return node
-
-
-class G1mParser(Parser):
-    '''
-    G1M has different syntax from UCB, but parses to the same AST tree.
-    '''
-    def statement_list(self):
-        results = []
-        node = self.statement()
-        if node:
-            results.append(node)
-
-        while self.current_token.type in (SEMI, DISP):
-            if self.current_token.type == SEMI:
-                self.eat(SEMI)
-            else:
-                results.append(NullaryBuiltin(self.current_token))
-                self.eat(DISP)
-
-            if self.current_token.type != EOF:
-                statement = self.statement()
-                if statement:
-                    results.append(statement)
-
-        return results
-
-
-    def if_then(self):
-        self.eat(IF)
-        condition = None
-        if self.try_parse(self.condition):
-            condition = self.condition()
-        else:
-            condition = self.expr()
-        root = IfThen(condition)
-        self.eat(SEMI)
-        self.eat(THEN)
-        nodes = self.statement_list()
-        for node in nodes:
-            root.if_clause.append(node)
-        if self.current_token.type == ELSE:
-            self.eat(ELSE)
-            nodes = self.statement_list()
-            for node in nodes:
-                root.else_clause.append(node)
-        self.eat(IFEND)
-        return root
-
-
-    def for_to(self):
-        self.eat(FOR)
-        start = self.expr()
-        self.eat(ASSIGN)
-        var = self.factor_ref()
-        self.eat(TO)
-        end = self.expr()
-        step = Num(Token(NUMBER, 1.0))
-        if self.current_token.type == STEP:
-            self.eat(STEP)
-            step = self.expr()
-        self.eat(SEMI)
-        root = ForTo(start, end, step, var)
-        nodes = self.statement_list()
-        for node in nodes:
-            root.children.append(node)
-        self.eat(NEXT)
-        return root
-
-
-    def text(self, token):
-        self.eat(TEXT)
-        arg1 = self.expr()
-        self.eat(COMMA)
-        arg2 = self.expr()
-        self.eat(COMMA)
-        arg3 = None
-        if self.current_token.type == STRING:
-            arg3 = self.string_literal()
-        else:
-            arg3 = self.expr()
-        return TernaryBuiltin(token, b'Text', arg1, arg2, arg3)
-
-
-    def quaternary_builtin(self, token, name):
-        self.eat(token.type)
-        arg1 = self.expr()
-        self.eat(COMMA)
-        arg2 = self.expr()
-        self.eat(COMMA)
-        arg3 = self.expr()
-        self.eat(COMMA)
-        arg4 = self.expr()
-        return QuaternaryBuiltin(token, name, arg1, arg2, arg3, arg4)
-
-
-    def senary_builtin(self, token, name):
-        self.eat(token.type)
-        arg1 = self.expr()
-        self.eat(COMMA)
-        arg2 = self.expr()
-        self.eat(COMMA)
-        arg3 = self.expr()
-        self.eat(COMMA)
-        arg4 = self.expr()
-        self.eat(COMMA)
-        arg5 = self.expr()
-        self.eat(COMMA)
-        arg6 = self.expr()
-        return SenaryBuiltin(token, name, arg1, arg2, arg3, arg4, arg5, arg6)
-
-
-    def assignment_statement(self):
-        left = self.expr()
-        self.eat(ASSIGN)
-        right = self.assignment_factor_ref()
-        node = Assign(left, right)
-        return node
-
-
-class UcbParser(Parser):
-    '''
-    UCB has different syntax from G1M, but parses to the same AST tree.
-    '''
-    def statement_list(self):
-        results = []
-
-        in_braces = self.current_token.type == LBRACE
-        if in_braces:
-            self.eat(LBRACE)
-
-        node = self.statement()
-        if node:
-            results.append(node)
-
-        while self.current_token.type in (SEMI, RBRACE):
-            if self.current_token.type == SEMI:
-                self.eat(SEMI)
-            else:
-                if in_braces:
-                    # this brace is the end of the current statement list
-                    # don't consume it
-                    break
-                else:
-                    # eat the brace. it belongs to the end of a child statement
-                    self.eat(RBRACE)
-
-            if self.current_token.type != EOF:
-                statement = self.statement()
-                if statement:
-                    results.append(statement)
-
-        return results
-
-
-    def if_then(self):
-        self.eat(IF)
-        self.eat(LPAREN)
-        condition = None
-        if self.try_parse(self.condition):
-            condition = self.condition()
-        else:
-            condition = self.expr()
-        root = IfThen(condition)
-        self.eat(RPAREN)
-        nodes = self.statement_list()
-        for node in nodes:
-            root.if_clause.append(node)
-        if self.lexer.peek_next_token().type == ELSE:
-            self.eat(RBRACE)
-            self.eat(ELSE)
-            nodes = self.statement_list()
-            for node in nodes:
-                root.else_clause.append(node)
-        return root
-
-
-    def for_to(self):
-        self.eat(FOR)
-        self.eat(LPAREN)
-        var = self.factor_ref()
-        self.eat(ASSIGN)
-        start = self.expr()
-        self.eat(TO)
-        end = self.expr()
-        step = Num(Token(NUMBER, 1.0))
-        if self.current_token.type == STEP:
-            self.eat(STEP)
-            step = self.expr()
-        self.eat(RPAREN)
-        root = ForTo(start, end, step, var)
-        nodes = self.statement_list()
-        for node in nodes:
-            root.children.append(node)
-        return root
-
-
-    def text(self, token):
-        self.eat(TEXT)
-        self.eat(LPAREN)
-        arg1 = self.expr()
-        self.eat(COMMA)
-        arg2 = self.expr()
-        self.eat(COMMA)
-        arg3 = None
-        if self.current_token.type == STRING:
-            arg3 = self.string_literal()
-        else:
-            arg3 = self.expr()
-        self.eat(RPAREN)
-        return TernaryBuiltin(token, b'Text', arg1, arg2, arg3)
-
-
-    def quaternary_builtin(self, token, name):
-        self.eat(token.type)
-        self.eat(LPAREN)
-        arg1 = self.expr()
-        self.eat(COMMA)
-        arg2 = self.expr()
-        self.eat(COMMA)
-        arg3 = self.expr()
-        self.eat(COMMA)
-        arg4 = self.expr()
-        self.eat(RPAREN)
-        return QuaternaryBuiltin(token, name, arg1, arg2, arg3, arg4)
-
-
-    def senary_builtin(self, token, name):
-        self.eat(token.type)
-        self.eat(LPAREN)
-        arg1 = self.expr()
-        self.eat(COMMA)
-        arg2 = self.expr()
-        self.eat(COMMA)
-        arg3 = self.expr()
-        self.eat(COMMA)
-        arg4 = self.expr()
-        self.eat(COMMA)
-        arg5 = self.expr()
-        self.eat(COMMA)
-        arg6 = self.expr()
-        self.eat(RPAREN)
-        return SenaryBuiltin(token, name, arg1, arg2, arg3, arg4, arg5, arg6)
-
-
-    def assignment_statement(self):
-        left = self.assignment_factor_ref()
-        self.eat(ASSIGN)
-        right = self.expr()
-        node = Assign(left, right)
         return node

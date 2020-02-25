@@ -91,6 +91,11 @@ CHARACTER_ENCODING_TABLE = bytes.maketrans(
 def translate_string_literal(b):
 	return b.translate(CHARACTER_ENCODING_TABLE)
 
+def translate_alpha_mem_char_to_ucb(c):
+	if c == b'\xcd':
+		return b'theta'
+	return c
+
 UCB_INDENTATION = 4
 UCB_WORD_CHARACTERS = (
 	b'ABCDEFGHIJKLMNOPQRSTUVWXYZ'

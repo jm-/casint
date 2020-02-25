@@ -4,25 +4,22 @@ import struct
 import bitstring
 
 from common import translate_string_literal
-from interpreter import G1mLexer, UcbLexer, G1mParser, UcbParser
+from g1m import G1mLexer, G1mParser
+from ucb import UcbLexer, UcbParser
 
 
 class CasioProgram(object):
     def __init__(self, name, size, tree):
         self.name = name
+        self.stringname = str(translate_string_literal(name), 'ascii')
         self.size = size
         self.tree = tree
-
-
-    def get_printable_name(self):
-        return translate_string_literal(self.name)
 
 
     def __str__(self):
         status = '(valid)' if self.tree else '(invalid)'
         # translate the title
-        stringname = str(self.get_printable_name(), 'ascii')
-        return f'{stringname:8s}  : {self.size:5d} {status}'
+        return f'{self.stringname:8s}  : {self.size:5d} {status}'
 
 
     def __repr__(self):
