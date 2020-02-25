@@ -521,6 +521,12 @@ class UcbLexer(Lexer):
                 word = self.ucb_word()
                 print(f'word: {word}')
 
+                if word == b'if':
+                    return Token(IF, b'If ')
+
+                if word == b'else':
+                    return Token(ELSE, b'Else')
+
                 if word == b'for':
                     return Token(FOR, b'For ')
 
@@ -535,6 +541,9 @@ class UcbLexer(Lexer):
 
                 if word == b'F_Line':
                     return Token(FLINE, b'F-Line ')
+
+                if word == b'ViewWindow':
+                    return Token(VIEWWINDOW, b'ViewWindow')
 
                 if len(word) == 1 and is_variable(word):
                     return Token(VARIABLE, word)
@@ -562,6 +571,36 @@ class UcbLexer(Lexer):
                     self.advance()
                     return Token(EQ, b'==')
                 return Token(ASSIGN, b'->')
+
+            if self.current_char == b'<':
+                self.advance()
+                if self.peek() == b'=':
+                    self.advance()
+                    return Token(LTE, b'<=')
+                return Token(LT, b'<')
+
+            if self.current_char == b'>':
+                self.advance()
+                if self.peek() == b'=':
+                    self.advance()
+                    return Token(GTE, b'>=')
+                return Token(GT, b'>')
+
+            if self.current_char == b'+':
+                self.advance()
+                return Token(PLUS, b'+')
+
+            if self.current_char == b'-':
+                self.advance()
+                return Token(MINUS, b'-')
+
+            if self.current_char == b'*':
+                self.advance()
+                return Token(MUL, b'x')
+
+            if self.current_char == b'/':
+                self.advance()
+                return Token(DIV, b'/')
 
             if self.current_char == b'(':
                 self.advance()
@@ -985,12 +1024,13 @@ class Parser():
         # set current token to the first token taken from the input
         self.current_token = self.lexer.get_next_token()
 
-    def error(self):
+    def error(self, message=''):
         raise ParserException(
             f'Invalid syntax:'
             f' tok={self.current_token}'
             f' pos={self.lexer.pos}'
             f' chr={self.lexer.current_char}'
+            f' msg={message}'
         )
 
     def eat(self, token_type):
@@ -1001,7 +1041,7 @@ class Parser():
         if self.current_token.type == token_type:
             self.current_token = self.lexer.get_next_token()
         else:
-            self.error()
+            self.error(f'expected {token_type} token')
 
     def try_parse(self, parse_func):
         pos = self.lexer.freeze()
@@ -1022,26 +1062,6 @@ class Parser():
         for node in nodes:
             root.children.append(node)
         return root
-
-    def statement_list(self):
-        results = []
-        node = self.statement()
-        if node:
-            results.append(node)
-
-        while self.current_token.type in (SEMI, DISP):
-            if self.current_token.type == SEMI:
-                self.eat(SEMI)
-            else:
-                results.append(NullaryBuiltin(self.current_token))
-                self.eat(DISP)
-
-            if self.current_token.type != EOF:
-                statement = self.statement()
-                if statement:
-                    results.append(statement)
-
-        return results
 
     def statement(self):
         token = self.current_token
@@ -1153,15 +1173,7 @@ class Parser():
             node = TernaryBuiltin(token, b'Locate', arg1, arg2, arg3)
 
         elif token.type == FLINE:
-            self.eat(FLINE)
-            arg1 = self.expr()
-            self.eat(COMMA)
-            arg2 = self.expr()
-            self.eat(COMMA)
-            arg3 = self.expr()
-            self.eat(COMMA)
-            arg4 = self.expr()
-            node = QuaternaryBuiltin(token, b'F_Line', arg1, arg2, arg3, arg4)
+            node = self.quaternary_builtin(token, b'F_Line')
 
         elif token.type == CIRCLE:
             self.eat(CIRCLE)
@@ -1209,19 +1221,7 @@ class Parser():
             node = BinaryBuiltin(token, b'PxlChg', arg1, arg2)
 
         elif token.type == VIEWWINDOW:
-            self.eat(VIEWWINDOW)
-            arg1 = self.expr()
-            self.eat(COMMA)
-            arg2 = self.expr()
-            self.eat(COMMA)
-            arg3 = self.expr()
-            self.eat(COMMA)
-            arg4 = self.expr()
-            self.eat(COMMA)
-            arg5 = self.expr()
-            self.eat(COMMA)
-            arg6 = self.expr()
-            node = SenaryBuiltin(token, b'ViewWindow', arg1, arg2, arg3, arg4, arg5, arg6)
+            node = self.senary_builtin(token, b'ViewWindow')
 
         elif token.type == LBRACE:
             node = self.initialize_memory()
@@ -1241,27 +1241,6 @@ class Parser():
                 node = self.empty()
 
         return node
-
-    def if_then(self):
-        self.eat(IF)
-        condition = None
-        if self.try_parse(self.condition):
-            condition = self.condition()
-        else:
-            condition = self.expr()
-        root = IfThen(condition)
-        self.eat(SEMI)
-        self.eat(THEN)
-        nodes = self.statement_list()
-        for node in nodes:
-            root.if_clause.append(node)
-        if self.current_token.type == ELSE:
-            self.eat(ELSE)
-            nodes = self.statement_list()
-            for node in nodes:
-                root.else_clause.append(node)
-        self.eat(IFEND)
-        return root
 
     def inline_if(self):
         condition = None
@@ -1370,13 +1349,6 @@ class Parser():
     def string_literal(self):
         node = StringLit(self.current_token)
         self.eat(STRING)
-        return node
-
-    def assignment_statement(self):
-        left = self.expr()
-        self.eat(ASSIGN)
-        right = self.assignment_factor_ref()
-        node = Assign(left, right)
         return node
 
     def variable(self):
@@ -1585,6 +1557,49 @@ class G1mParser(Parser):
     '''
     G1M has different syntax from UCB, but parses to the same AST tree.
     '''
+    def statement_list(self):
+        results = []
+        node = self.statement()
+        if node:
+            results.append(node)
+
+        while self.current_token.type in (SEMI, DISP):
+            if self.current_token.type == SEMI:
+                self.eat(SEMI)
+            else:
+                results.append(NullaryBuiltin(self.current_token))
+                self.eat(DISP)
+
+            if self.current_token.type != EOF:
+                statement = self.statement()
+                if statement:
+                    results.append(statement)
+
+        return results
+
+
+    def if_then(self):
+        self.eat(IF)
+        condition = None
+        if self.try_parse(self.condition):
+            condition = self.condition()
+        else:
+            condition = self.expr()
+        root = IfThen(condition)
+        self.eat(SEMI)
+        self.eat(THEN)
+        nodes = self.statement_list()
+        for node in nodes:
+            root.if_clause.append(node)
+        if self.current_token.type == ELSE:
+            self.eat(ELSE)
+            nodes = self.statement_list()
+            for node in nodes:
+                root.else_clause.append(node)
+        self.eat(IFEND)
+        return root
+
+
     def for_to(self):
         self.eat(FOR)
         start = self.expr()
@@ -1619,10 +1634,98 @@ class G1mParser(Parser):
         return TernaryBuiltin(token, b'Text', arg1, arg2, arg3)
 
 
+    def quaternary_builtin(self, token, name):
+        self.eat(token.type)
+        arg1 = self.expr()
+        self.eat(COMMA)
+        arg2 = self.expr()
+        self.eat(COMMA)
+        arg3 = self.expr()
+        self.eat(COMMA)
+        arg4 = self.expr()
+        return QuaternaryBuiltin(token, name, arg1, arg2, arg3, arg4)
+
+
+    def senary_builtin(self, token, name):
+        self.eat(token.type)
+        arg1 = self.expr()
+        self.eat(COMMA)
+        arg2 = self.expr()
+        self.eat(COMMA)
+        arg3 = self.expr()
+        self.eat(COMMA)
+        arg4 = self.expr()
+        self.eat(COMMA)
+        arg5 = self.expr()
+        self.eat(COMMA)
+        arg6 = self.expr()
+        return SenaryBuiltin(token, name, arg1, arg2, arg3, arg4, arg5, arg6)
+
+
+    def assignment_statement(self):
+        left = self.expr()
+        self.eat(ASSIGN)
+        right = self.assignment_factor_ref()
+        node = Assign(left, right)
+        return node
+
+
 class UcbParser(Parser):
     '''
     UCB has different syntax from G1M, but parses to the same AST tree.
     '''
+    def statement_list(self):
+        results = []
+
+        in_braces = self.current_token.type == LBRACE
+        if in_braces:
+            self.eat(LBRACE)
+
+        node = self.statement()
+        if node:
+            results.append(node)
+
+        while self.current_token.type in (SEMI, RBRACE):
+            if self.current_token.type == SEMI:
+                self.eat(SEMI)
+            else:
+                if in_braces:
+                    # this brace is the end of the current statement list
+                    # don't consume it
+                    break
+                else:
+                    # eat the brace. it belongs to the end of a child statement
+                    self.eat(RBRACE)
+
+            if self.current_token.type != EOF:
+                statement = self.statement()
+                if statement:
+                    results.append(statement)
+
+        return results
+
+
+    def if_then(self):
+        self.eat(IF)
+        self.eat(LPAREN)
+        condition = None
+        if self.try_parse(self.condition):
+            condition = self.condition()
+        else:
+            condition = self.expr()
+        root = IfThen(condition)
+        self.eat(RPAREN)
+        nodes = self.statement_list()
+        for node in nodes:
+            root.if_clause.append(node)
+        if self.current_token.type == ELSE:
+            self.eat(ELSE)
+            nodes = self.statement_list()
+            for node in nodes:
+                root.else_clause.append(node)
+        return root
+
+
     def for_to(self):
         self.eat(FOR)
         self.eat(LPAREN)
@@ -1636,12 +1739,10 @@ class UcbParser(Parser):
             self.eat(STEP)
             step = self.expr()
         self.eat(RPAREN)
-        self.eat(LBRACE)
         root = ForTo(start, end, step, var)
         nodes = self.statement_list()
         for node in nodes:
             root.children.append(node)
-        self.eat(RBRACE)
         return root
 
 
@@ -1659,3 +1760,43 @@ class UcbParser(Parser):
             arg3 = self.expr()
         self.eat(RPAREN)
         return TernaryBuiltin(token, b'Text', arg1, arg2, arg3)
+
+
+    def quaternary_builtin(self, token, name):
+        self.eat(token.type)
+        self.eat(LPAREN)
+        arg1 = self.expr()
+        self.eat(COMMA)
+        arg2 = self.expr()
+        self.eat(COMMA)
+        arg3 = self.expr()
+        self.eat(COMMA)
+        arg4 = self.expr()
+        self.eat(RPAREN)
+        return QuaternaryBuiltin(token, name, arg1, arg2, arg3, arg4)
+
+
+    def senary_builtin(self, token, name):
+        self.eat(token.type)
+        self.eat(LPAREN)
+        arg1 = self.expr()
+        self.eat(COMMA)
+        arg2 = self.expr()
+        self.eat(COMMA)
+        arg3 = self.expr()
+        self.eat(COMMA)
+        arg4 = self.expr()
+        self.eat(COMMA)
+        arg5 = self.expr()
+        self.eat(COMMA)
+        arg6 = self.expr()
+        self.eat(RPAREN)
+        return SenaryBuiltin(token, name, arg1, arg2, arg3, arg4, arg5, arg6)
+
+
+    def assignment_statement(self):
+        left = self.assignment_factor_ref()
+        self.eat(ASSIGN)
+        right = self.expr()
+        node = Assign(left, right)
+        return node
