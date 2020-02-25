@@ -19,7 +19,7 @@ def unpack(filepath, output_folder):
     prepare_output_folder(output_folder)
     # write programs
     for program in programs:
-        program_filename = f"{str(program.get_printable_name(), 'ascii')}.ucb"
+        program_filename = f"{program.stringname}.ucb"
         program_filepath = os.path.join(output_folder, program_filename)
         with open(program_filepath, 'wb') as fp:
             program.tree.write_ucb(fp, 0)
