@@ -91,6 +91,14 @@ class Lexer():
         return char
 
 
+    def peek_next_token(self):
+        pos = self.freeze()
+        self.advance()
+        token = self.get_next_token()
+        self.seek(pos)
+        return token
+
+
 class G1mLexer(Lexer):
     def numeric(self):
         """Return a (multidigit) integer consumed from the input."""
@@ -1718,7 +1726,8 @@ class UcbParser(Parser):
         nodes = self.statement_list()
         for node in nodes:
             root.if_clause.append(node)
-        if self.current_token.type == ELSE:
+        if self.lexer.peek_next_token().type == ELSE:
+            self.eat(RBRACE)
             self.eat(ELSE)
             nodes = self.statement_list()
             for node in nodes:
