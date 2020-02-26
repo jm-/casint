@@ -86,7 +86,7 @@
             "program": "${workspaceFolder}/run.py",
             "args": [
                 "output/scum2",
-                "SCUM 2.0"
+                "SETPSCUM"
             ],
             "cwd": "${workspaceFolder}",
             "console": "integratedTerminal"
