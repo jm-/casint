@@ -5,3 +5,25 @@ if (O == 0) {
         K = GetKey();
     };
 }
+
+// draws a box on the graph screen
+if (O == 1) {
+    for (A = 21 to 39 step 6) {
+        Text(A, 29, "                  ");
+    }
+    F_Line(30, 22, 98, 22);
+    F_Line(30, 42, 98, 42);
+    F_Line(30, 22, 30, 42);
+    F_Line(98, 22, 98, 42);
+    F_Line(31, 43, 99, 43);
+    F_Line(99, 23, 99, 43);
+}
+
+// updates the display of an indeterminate progress bar
+if (O == 2) {
+    Isz(F);
+    Text(34, F, " ////////////// ");
+    if (F == 34) {
+        F = 30;
+    }
+}

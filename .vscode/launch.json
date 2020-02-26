@@ -17,6 +17,19 @@
             "console": "integratedTerminal"
         },
         {
+            "name": "MAW~MIND (unpack)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/g1mtool.py",
+            "args": [
+                "unpack",
+                "input/captures/MAW~MIND.g1m",
+                "output/maw-mind/"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
+        },
+        {
             "name": "MAW~MIND (ucb)",
             "type": "python",
             "request": "launch",
@@ -29,14 +42,51 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "MAW~MIND (unpack)",
+            "name": "PURE~~NC (unpack)",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/g1mtool.py",
             "args": [
                 "unpack",
-                "input/captures/MAW~MIND.g1m",
-                "output/maw-mind/"
+                "input/captures/PURE~~NC.g1m",
+                "output/pure--nc/"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "PURE~~NC (ucb)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/run.py",
+            "args": [
+                "output/pure--nc",
+                "PURE~N+C"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "SCUM2 (unpack)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/g1mtool.py",
+            "args": [
+                "unpack",
+                "input/captures/SCUM2.g1m",
+                "output/scum2/"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "SCUM2 (ucb)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/run.py",
+            "args": [
+                "output/scum2",
+                "SCUM 2.0"
             ],
             "cwd": "${workspaceFolder}",
             "console": "integratedTerminal"

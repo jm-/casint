@@ -544,6 +544,12 @@ class G1mParser(Parser):
         return NullaryFunc(token, name)
 
 
+    def unary_builtin(self, token, name, fn1):
+        self.eat(token.type)
+        arg1 = fn1()
+        return UnaryBuiltin(token, name, arg1)
+
+
     def unary_func(self, token, name):
         self.eat(token.type)
         arg1 = self.expr()

@@ -49,6 +49,8 @@ class Lexer():
     def __init__(self, text):
         self.text = text
         self.pos = 0
+        self.pos_ln = 1
+        self.pos_col = 1
         self.current_char = self.text[self.pos:self.pos+1]
         if self.current_char == b'\x00':
             self.current_char = None
@@ -57,14 +59,20 @@ class Lexer():
     def error(self):
         raise LexerException(
             f'Invalid character:'
-            f' pos={self.pos}'
+            f' pos={self.pos} ln={self.pos_ln} col={self.pos_col}'
             f' chrs={self.text[self.pos:self.pos+20]}'
         )
 
 
     def advance(self):
-        """Advance the `pos` pointer and set the `current_char` variable."""
+        """Advance the `pos` pointers and set the `current_char` variable."""
         self.pos += 1
+        if self.current_char == b'\n':
+            self.pos_ln += 1
+            self.pos_col = 1
+        else:
+            self.pos_col += 1
+
         if self.pos >= len(self.text):
             self.current_char = None  # Indicates end of input
         else:
@@ -74,11 +82,13 @@ class Lexer():
 
 
     def freeze(self):
-        return self.pos
+        return self.pos, self.pos_ln, self.pos_col
 
 
-    def seek(self, pos):
+    def seek(self, pos, ln, col):
         self.pos = pos
+        self.pos_ln = ln
+        self.pos_col = col
         self.current_char = self.text[self.pos:self.pos+1]
         if self.current_char == b'\x00':
             self.current_char = None
@@ -93,10 +103,10 @@ class Lexer():
 
 
     def peek_next_token(self):
-        pos = self.freeze()
+        pos, ln, col = self.freeze()
         self.advance()
         token = self.get_next_token()
-        self.seek(pos)
+        self.seek(pos, ln, col)
         return token
 
 
@@ -129,7 +139,7 @@ class Parser():
 
 
     def try_parse(self, parse_func):
-        pos = self.lexer.freeze()
+        pos, ln, col = self.lexer.freeze()
         token = self.current_token
         try:
             parse_func()
@@ -138,7 +148,7 @@ class Parser():
         else:
             return True
         finally:
-            self.lexer.seek(pos)
+            self.lexer.seek(pos, ln, col)
             self.current_token = token
 
 
@@ -224,12 +234,10 @@ class Parser():
             node = self.prog(token)
 
         elif token.type == DSZ:
-            self.eat(DSZ)
-            node = UnaryBuiltin(token, b'Dsz', self.factor_ref())
+            node = self.unary_builtin(token, b'Dsz', self.factor_ref)
 
         elif token.type == ISZ:
-            self.eat(ISZ)
-            node = UnaryBuiltin(token, b'Isz', self.factor_ref())
+            node = self.unary_builtin(token, b'Isz', self.factor_ref)
 
         elif token.type == STOPICT:
             node = self.stopict(token)
@@ -256,8 +264,7 @@ class Parser():
             node = TernaryBuiltin(token, b'Circle', arg1, arg2, arg3)
 
         elif token.type == HORIZONTAL:
-            self.eat(HORIZONTAL)
-            node = UnaryBuiltin(token, b'Horizontal', self.expr())
+            return self.unary_builtin(token, b'Horizontal', self.expr)
 
         elif token.type == PLOTON:
             self.eat(PLOTON)

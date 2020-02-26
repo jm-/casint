@@ -99,6 +99,12 @@ class UcbLexer(Lexer):
                 if word == b'while':
                     return Token(WHILE, b'While ')
 
+                if word == b'Isz':
+                    return Token(ISZ, b'Isz ')
+
+                if word == b'Dsz':
+                    return Token(DSZ, b'Dsz ')
+
                 if word == b'StoPict':
                     return Token(STOPICT, b'StoPict ')
 
@@ -131,6 +137,9 @@ class UcbLexer(Lexer):
 
                 if word == b'F_Line':
                     return Token(FLINE, b'F-Line ')
+
+                if word == b'Horizontal':
+                    return Token(HORIZONTAL, b'Horizontal ')
 
                 if word == b'PxlOn':
                     return Token(PXLON, b'PxlOn ')
@@ -404,6 +413,14 @@ class UcbParser(Parser):
         self.eat(LPAREN)
         self.eat(RPAREN)
         return NullaryFunc(token, name)
+
+
+    def unary_builtin(self, token, name, fn1):
+        self.eat(token.type)
+        self.eat(LPAREN)
+        arg1 = fn1()
+        self.eat(RPAREN)
+        return UnaryBuiltin(token, name, arg1)
 
 
     def unary_func(self, token, name):

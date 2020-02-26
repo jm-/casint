@@ -604,7 +604,7 @@ class CasioMachine(NodeVisitor):
         x = self._visit(node.dimensions[0])
         y = self._visit(node.dimensions[1])
         if node.mem_struct.op.type == MAT:
-            self.mats[node.right.value] = [[0 for j in range(int(y))] for i in range(int(x))]
+            self.mats[node.mem_struct.value] = [[0 for j in range(int(y))] for i in range(int(x))]
         else:
             raise Exception('Unknown memory index initialization: {}'.format(node.mem_struct.op.type))
 
