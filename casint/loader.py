@@ -112,7 +112,7 @@ class G1mFile(object):
         assert itemTypeIdentifier == 0x01
 
         # first 10 bytes are reserved
-        lexer = G1mLexer(itemData[10:])
+        lexer = G1mLexer(itemData[10:], self.filepath)
         parser = G1mParser(lexer)
         tree = parser.parse()
 
@@ -149,7 +149,7 @@ def get_program_name_from_filename(filename):
 def load_program_from_ucb_file(filepath, progam_name):
     with open(filepath, 'rb') as fp:
         ucb_data = fp.read()
-    lexer = UcbLexer(ucb_data)
+    lexer = UcbLexer(ucb_data, filepath)
     parser = UcbParser(lexer)
     tree = parser.parse()
 

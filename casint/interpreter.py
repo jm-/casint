@@ -46,8 +46,9 @@ def parse_word_as_number(word):
 
 
 class Lexer():
-    def __init__(self, text):
+    def __init__(self, text, filepath):
         self.text = text
+        self.filepath = filepath
         self.pos = 0
         self.pos_ln = 1
         self.pos_col = 1
@@ -59,6 +60,7 @@ class Lexer():
     def error(self):
         raise LexerException(
             f'Invalid character:'
+            f' filepath={self.filepath}'
             f' pos={self.pos} ln={self.pos_ln} col={self.pos_col}'
             f' chrs={self.text[self.pos:self.pos+20]}'
         )
@@ -121,7 +123,8 @@ class Parser():
         raise ParserException(
             f'Invalid syntax:'
             f' tok={self.current_token}'
-            f' pos={self.lexer.pos}'
+            f' filepath={self.lexer.filepath}'
+            f' pos={self.lexer.pos} ln={self.lexer.pos_ln} col={self.lexer.pos_col}'
             f' chr={self.lexer.current_char}'
             f' msg={message}'
         )
@@ -548,13 +551,7 @@ class Parser():
         elif token.type == GETKEY:
             return self.nullary_func(token, b'GetKey')
         elif token.type == PXLTEST:
-            self.eat(PXLTEST)
-            arg1 = self.expr()
-            self.eat(COMMA)
-            arg2 = self.expr()
-            self.eat(RPAREN)
-            node = BinaryFunc(token, b'PxlTest', arg1, arg2)
-            return node
+            return self.pxltest(token)
         elif token.type == LOG:
             return self.unary_func(token, b'Log')
         elif token.type == INTG:

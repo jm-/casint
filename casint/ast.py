@@ -47,11 +47,21 @@ class BinOp(AST):
         self.ucb_repr = ucb_repr
 
     def write_ucb(self, fp, indent):
-        self.left.write_ucb(fp, indent)
+        if type(self.left) is BinOp:
+            fp.write(b'(')
+            self.left.write_ucb(fp, indent)
+            fp.write(b')')
+        else:
+            self.left.write_ucb(fp, indent)
         fp.write(b' ')
         fp.write(self.ucb_repr)
         fp.write(b' ')
-        self.right.write_ucb(fp, indent)
+        if type(self.right) is BinOp:
+            fp.write(b'(')
+            self.right.write_ucb(fp, indent)
+            fp.write(b')')
+        else:
+            self.right.write_ucb(fp, indent)
 
 
 class Num(AST):

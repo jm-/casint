@@ -564,6 +564,15 @@ class G1mParser(Parser):
         return BinaryBuiltin(token, name, arg1, arg2)
 
 
+    def pxltest(self, token):
+        self.eat(PXLTEST)
+        arg1 = self.expr()
+        self.eat(COMMA)
+        arg2 = self.expr()
+        self.eat(RPAREN)
+        return BinaryFunc(token, b'PxlTest', arg1, arg2)
+
+
     def text(self, token):
         self.eat(TEXT)
         arg1 = self.expr()

@@ -150,6 +150,9 @@ class UcbLexer(Lexer):
                 if word == b'PxlChg':
                     return Token(PXLCHG, b'PxlChg ')
 
+                if word == b'PxlTest':
+                    return Token(PXLTEST, b'PxlTest(')
+
                 if word == b'ViewWindow':
                     return Token(VIEWWINDOW, b'ViewWindow')
 
@@ -159,8 +162,11 @@ class UcbLexer(Lexer):
                 if word == b'ClrText':
                     return Token(CLRTEXT, b'ClrText')
 
-                if word == b'theta':
+                if word == b'rad':
                     return Token(VARIABLE, b'\xcd')
+
+                if word == b'theta':
+                    return Token(VARIABLE, b'\xce')
 
                 if word == b'Mat':
                     return Token(MAT, b'Mat ')
@@ -439,6 +445,16 @@ class UcbParser(Parser):
         arg2 = self.expr()
         self.eat(RPAREN)
         return BinaryBuiltin(token, name, arg1, arg2)
+
+
+    def pxltest(self, token):
+        self.eat(PXLTEST)
+        self.eat(LPAREN)
+        arg1 = self.expr()
+        self.eat(COMMA)
+        arg2 = self.expr()
+        self.eat(RPAREN)
+        return BinaryFunc(token, b'PxlTest', arg1, arg2)
 
 
     def text(self, token):

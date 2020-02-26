@@ -106,5 +106,7 @@ def translate_ascii_bytes_to_casio(b):
 
 def translate_alpha_mem_char_to_ucb(c):
     if c == b'\xcd':
+        return b'rad'
+    if c == b'\xce':
         return b'theta'
     return c
