@@ -11,9 +11,9 @@ except ImportError:
         os.environ['PYSDL2_DLL_PATH'] = 'lib/32' if arch == '32bit' else 'lib/64'
     import sdl2
 
-from decoder import load_programs_from_ucb_dir, load_programs_from_g1m_file
-from machine import CasioMachine, InterpreterQuitException
-from casiosystem import ProgramMenu
+from casint.loader import load_programs_from_ucb_dir, load_programs_from_g1m_file
+from casint.machine import CasioMachine, InterpreterQuitException
+from casint.casiosystem import ProgramMenu
 
 
 def main(path, prog_name=None):
@@ -53,7 +53,9 @@ def main(path, prog_name=None):
                 if selection is None:
                     # display a program selection using the machine
                     selection = menu.show()
-                casio.run(programs[selection].name)
+                program = programs[selection]
+                print(f'Running program: "{program.stringname}"')
+                casio.run(program.name)
                 casio.wait_for_any_key()
                 selection = None
         except InterpreterQuitException:

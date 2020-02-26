@@ -83,22 +83,28 @@ TEXT = b'TEXT'
 ALPHA_MEM_CHARS = b'ABCDEFGHIJKLMNOPQRSTUVWXYZ\xcd\xce\xd0'
 
 # table for G1M character set
-CHARACTER_ENCODING_TABLE = bytes.maketrans(
-	b'\x89\x99\xab',
-	b'\x2b\x7e\x21'
-)
-
-def translate_string_literal(b):
-	return b.translate(CHARACTER_ENCODING_TABLE)
-
-def translate_alpha_mem_char_to_ucb(c):
-	if c == b'\xcd':
-		return b'theta'
-	return c
+CASIO_CHARS = b'\x89\x99\xab'
+ASCII_CHARS = b'\x2b\x7e\x21'
+CASIO_TO_ASCII_TABLE = bytes.maketrans(CASIO_CHARS, ASCII_CHARS)
+ASCII_TO_CASIO_TABLE = bytes.maketrans(ASCII_CHARS, CASIO_CHARS)
 
 UCB_INDENTATION = 4
 UCB_WORD_CHARACTERS = (
-	b'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-	b'abcdefghijklmnopqrstuvwxyz'
-	b'0123456789_.'
+    b'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    b'abcdefghijklmnopqrstuvwxyz'
+    b'0123456789_.'
 )
+
+
+def translate_casio_bytes_to_ascii(b):
+    return b.translate(CASIO_TO_ASCII_TABLE)
+
+
+def translate_ascii_bytes_to_casio(b):
+    return b.translate(ASCII_TO_CASIO_TABLE)
+
+
+def translate_alpha_mem_char_to_ucb(c):
+    if c == b'\xcd':
+        return b'theta'
+    return c

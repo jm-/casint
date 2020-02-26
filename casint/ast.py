@@ -1,8 +1,17 @@
-from common import *
+from .common import *
 
 
 class AST(object):
     pass
+
+
+class Comment(AST):
+    def __init__(self, token):
+        self.comment_text = token.value
+
+    def write_ucb(self, fp, indent):
+        fp.write(b'//')
+        fp.write(self.comment_text)
 
 
 class MemoryStructure(AST):
@@ -62,7 +71,7 @@ class StringLit(AST):
 
     def write_ucb(self, fp, indent):
         fp.write(b'"')
-        fp.write(translate_string_literal(self.value))
+        fp.write(translate_casio_bytes_to_ascii(self.value))
         fp.write(b'"')
 
 
@@ -332,14 +341,14 @@ class SenaryBuiltin(AST):
 
 
 class Assign(AST):
-    def __init__(self, left, right):
-        self.left = left
-        self.right = right
+    def __init__(self, expr, var):
+        self.expr = expr
+        self.var = var
 
     def write_ucb(self, fp, indent):
-        self.right.write_ucb(fp, indent)
+        self.var.write_ucb(fp, indent)
         fp.write(b' = ')
-        self.left.write_ucb(fp, indent)
+        self.expr.write_ucb(fp, indent)
         fp.write(b';\n')
 
 
@@ -355,17 +364,17 @@ class VariableRange(AST):
 
 
 class Initialize(AST):
-    def __init__(self, left, right):
-        self.left = left
-        self.right = right
+    def __init__(self, dimensions, mem_struct):
+        self.dimensions = dimensions
+        self.mem_struct = mem_struct
 
     def write_ucb(self, fp, indent):
         fp.write(b'dim ')
-        self.right.write_ucb(fp, indent)
+        self.mem_struct.write_ucb(fp, indent)
         fp.write(b' = (')
-        self.left[0].write_ucb(fp, indent)
+        self.dimensions[0].write_ucb(fp, indent)
         fp.write(b', ')
-        self.left[1].write_ucb(fp, indent)
+        self.dimensions[1].write_ucb(fp, indent)
         fp.write(b');\n')
 
 

@@ -1,6 +1,16 @@
-from common import *
-from ast import *
-from interpreter import *
+from .common import *
+from .ast import *
+from .interpreter import (
+    Lexer,
+    Parser,
+    LexerException,
+    ParserException,
+    Token,
+    is_variable,
+    is_numeric,
+    is_ucb_word_character,
+    parse_word_as_number
+)
 
 
 class UcbLexer(Lexer):
@@ -11,6 +21,15 @@ class UcbLexer(Lexer):
             result += self.current_char
             self.advance()
         self.advance()
+        return translate_ascii_bytes_to_casio(result)
+
+
+    def comment(self):
+        result = b''
+        # read until the line end
+        while self.current_char is not None and self.current_char not in (b'\r', b'\n'):
+            result += self.current_char
+            self.advance()
         return result
 
 
@@ -24,22 +43,31 @@ class UcbLexer(Lexer):
 
     def get_next_token(self):
         while self.current_char is not None:
-            print(f'{self.current_char}')
+            #print(f'{self.current_char}')
 
-            if self.current_char in (b' ', b'\n'):
+            if self.current_char in (b' ', b'\r', b'\n'):
                 # ignore whitespace
                 self.advance()
                 continue
 
             if is_ucb_word_character(self.current_char):
                 word = self.ucb_word()
-                print(f'word: {word}')
+                #print(f'word: {word}')
 
                 if word == b'label':
                     return Token(LBL, b'Lbl ')
 
                 if word == b'goto':
                     return Token(GOTO, b'Goto ')
+
+                if word == b'return':
+                    return Token(RETURN, b'Return')
+
+                if word == b'break':
+                    return Token(BREAK, b'Break')
+
+                if word == b'stop':
+                    return Token(STOP, b'Stop')
 
                 if word == b'dim':
                     return Token(DIM, b'Dim ')
@@ -77,6 +105,21 @@ class UcbLexer(Lexer):
                 if word == b'RclPict':
                     return Token(RCLPICT, b'RclPict ')
 
+                if word == b'Cls':
+                    return Token(CLS, b'Cls')
+
+                if word == b'log':
+                    return Token(LOG, b'log ')
+
+                if word == b'Intg':
+                    return Token(INTG, b'Intg ')
+
+                if word == b'Frac':
+                    return Token(FRAC, b'Frac ')
+
+                if word == b'RandNum':
+                    return Token(RANDNUM, b'Ran# ')
+
                 if word == b'GetKey':
                     return Token(GETKEY, b'Getkey')
 
@@ -101,8 +144,17 @@ class UcbLexer(Lexer):
                 if word == b'ViewWindow':
                     return Token(VIEWWINDOW, b'ViewWindow')
 
+                if word == b'Locate':
+                    return Token(LOCATE, b'Locate ')
+
+                if word == b'ClrText':
+                    return Token(CLRTEXT, b'ClrText')
+
                 if word == b'theta':
                     return Token(VARIABLE, b'\xcd')
+
+                if word == b'Mat':
+                    return Token(MAT, b'Mat ')
 
                 if len(word) == 1 and is_variable(word):
                     return Token(VARIABLE, word)
@@ -164,6 +216,9 @@ class UcbLexer(Lexer):
 
             if self.current_char == b'/':
                 self.advance()
+                if self.current_char == b'/':
+                    self.advance()
+                    return Token(COMMENT, self.comment())
                 return Token(DIV, b'/')
 
             if self.current_char == b'(':
@@ -190,6 +245,10 @@ class UcbLexer(Lexer):
                 self.advance()
                 return Token(RBRACKET, b']')
 
+            if self.current_char == b'~':
+                self.advance()
+                return Token(VARIABLERANGE, b'~')
+
             self.error()
 
         return Token(EOF, None)
@@ -207,9 +266,9 @@ class UcbParser(Parser):
             self.eat(LBRACE)
 
         while True:
-            # consume semicolons
-            while self.current_token.type == SEMI:
-                self.eat(SEMI)
+            # consume tokens we don't need in the AST
+            while self.current_token.type in (SEMI,):
+                self.eat(self.current_token.type)
 
             if self.current_token.type == EOF:
                 break
@@ -226,6 +285,15 @@ class UcbParser(Parser):
             results.append(statement)
 
         return results
+
+
+    def statement(self):
+        token = self.current_token
+
+        if token.type == DIM:
+            return self.initialize_memory()
+
+        return super().statement()
 
 
     def if_then(self):
@@ -263,6 +331,21 @@ class UcbParser(Parser):
             step = self.expr()
         self.eat(RPAREN)
         root = ForTo(start, end, step, var)
+        nodes = self.statement_list()
+        for node in nodes:
+            root.children.append(node)
+        return root
+
+
+    def while_loop(self):
+        root = WhileLoop()
+        self.eat(WHILE)
+        self.eat(LPAREN)
+        if self.try_parse(self.condition):
+            root.condition = self.condition()
+        else:
+            root.condition = self.expr()
+        self.eat(RPAREN)
         nodes = self.statement_list()
         for node in nodes:
             root.children.append(node)
@@ -309,11 +392,26 @@ class UcbParser(Parser):
         return UnaryBuiltin(token, b'Prog', arg1)
 
 
+    def nullary_builtin(self, token, name):
+        self.eat(token.type)
+        self.eat(LPAREN)
+        self.eat(RPAREN)
+        return NullaryBuiltin(token, name)
+
+
     def nullary_func(self, token, name):
         self.eat(token.type)
         self.eat(LPAREN)
         self.eat(RPAREN)
         return NullaryFunc(token, name)
+
+
+    def unary_func(self, token, name):
+        self.eat(token.type)
+        self.eat(LPAREN)
+        arg1 = self.expr()
+        self.eat(RPAREN)
+        return UnaryFunc(token, name, arg1)
 
 
     def binary_builtin(self, token, name):
@@ -340,6 +438,22 @@ class UcbParser(Parser):
             arg3 = self.expr()
         self.eat(RPAREN)
         return TernaryBuiltin(token, b'Text', arg1, arg2, arg3)
+
+
+    def locate(self, token):
+        self.eat(LOCATE)
+        self.eat(LPAREN)
+        arg1 = self.expr()
+        self.eat(COMMA)
+        arg2 = self.expr()
+        self.eat(COMMA)
+        arg3 = None
+        if self.current_token.type == STRING:
+            arg3 = self.string_literal()
+        else:
+            arg3 = self.expr()
+        self.eat(RPAREN)
+        return TernaryBuiltin(token, b'Locate', arg1, arg2, arg3)
 
 
     def quaternary_builtin(self, token, name):
@@ -375,8 +489,21 @@ class UcbParser(Parser):
 
 
     def assignment_statement(self):
-        left = self.assignment_factor_ref()
+        var = self.assignment_factor_ref()
         self.eat(ASSIGN)
-        right = self.expr()
-        node = Assign(left, right)
+        expr = self.expr()
+        node = Assign(expr, var)
+        return node
+
+
+    def initialize_memory(self):
+        self.eat(DIM)
+        mem_struct = self.memory_structure()
+        self.eat(ASSIGN)
+        self.eat(LPAREN)
+        x = self.expr()
+        self.eat(COMMA)
+        y = self.expr()
+        self.eat(RPAREN)
+        node = Initialize((x, y), mem_struct)
         return node

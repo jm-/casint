@@ -1,7 +1,7 @@
 # casint
 CASIO Basic Interpreter
 
-![Demo of input/captures/SCUM2.g1m](demo_scum2.png)
+![Demo of input/captures/SCUM2.g1m](doc/demo_scum2.png)
 
 A simple interpreter for CASIO Basic using G1M files as input. Uses SDL for graphics.
 
@@ -12,7 +12,7 @@ Requirements:
 * SDL2 installation
 
 1. Clone the repo
-2. Install the requirements 
+2. Install the requirements
 
 ```
 pip install -r requirements.txt

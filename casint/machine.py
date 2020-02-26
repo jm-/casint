@@ -1,11 +1,12 @@
 import ctypes
+from os.path import join as path_join, dirname
 from random import random as rand_num
 
 import sdl2
 
-from common import *
-from interpreter import Var, VariableRange, MemoryIndex, Label
-from graphics import setpixel, pxltest, fline, text, locate
+from .common import *
+from .interpreter import Var, VariableRange, MemoryIndex, Label
+from .graphics import setpixel, pxltest, fline, text, locate
 
 SDL_DELAY_MILLIS = 16
 ASPECT_RATIO = 2.0
@@ -149,8 +150,8 @@ class CasioMachine(NodeVisitor):
         self._clear_screen()
         self._render_end()
 
-        self.font_graph, self.font_graph_inverted = self._load_texture(b'img/font_graph.bmp')
-        self.font_text, self.font_text_inverted = self._load_texture(b'img/font_text.bmp')
+        self.font_graph, self.font_graph_inverted = self._load_texture('img/font_graph.bmp')
+        self.font_text, self.font_text_inverted = self._load_texture('img/font_text.bmp')
 
     def _initialize_text(self):
         self.text_line = 0
@@ -197,7 +198,8 @@ class CasioMachine(NodeVisitor):
         return texture
 
     def _load_texture(self, filename):
-        surface = sdl2.SDL_LoadBMP(filename)
+        filepath = path_join(dirname(__file__), filename).encode()
+        surface = sdl2.SDL_LoadBMP(filepath)
         texture = sdl2.SDL_CreateTextureFromSurface(self.renderer, surface)
         # create a copy of inverted pixels
         inverted_texture = self._create_inverted_texture(surface)
@@ -416,6 +418,10 @@ class CasioMachine(NodeVisitor):
         #    self._visit(statement)
         self._run_statements(node.children)
 
+    def _visit_Comment(self, node):
+        # comments don't get interpreted
+        pass
+
     def _visit_SenaryBuiltin(self, node):
         if node.op.type == VIEWWINDOW:
             # check that it matches our implementation
@@ -591,16 +597,16 @@ class CasioMachine(NodeVisitor):
         return node.value
 
     def _visit_Assign(self, node):
-        value = self._visit(node.left)
-        self._assign(value, node.right)
+        value = self._visit(node.expr)
+        self._assign(value, node.var)
 
     def _visit_Initialize(self, node):
-        x = self._visit(node.left[0])
-        y = self._visit(node.left[1])
-        if node.right.op.type == MAT:
+        x = self._visit(node.dimensions[0])
+        y = self._visit(node.dimensions[1])
+        if node.mem_struct.op.type == MAT:
             self.mats[node.right.value] = [[0 for j in range(int(y))] for i in range(int(x))]
         else:
-            raise Exception('Unknown memory index initialization: {}'.format(node.right.op.type))
+            raise Exception('Unknown memory index initialization: {}'.format(node.mem_struct.op.type))
 
     def _visit_BinOp(self, node):
         if node.op.type == PLUS:

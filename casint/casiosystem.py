@@ -1,7 +1,7 @@
 import time
 
-from common import *
-from graphics import setpixel, text, locate, fill
+from .common import *
+from .graphics import setpixel, text, locate, fill
 
 
 NUM_TEXT_ROWS = 6

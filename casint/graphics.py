@@ -54,7 +54,7 @@ def fline(renderer, x0, y0, x1, y1):
             if err <= 0:
                 x += sx
                 err += dy
-            y += sy        
+            y += sy
     points[c] = sdl2.SDL_Point(x, y)
     c += 1
     ptr = ctypes.cast(points, ctypes.POINTER(sdl2.SDL_Point))
@@ -146,13 +146,12 @@ GRAPH_RECTS = {
     b'-':        sdl2.SDL_Rect(84, 12, 4,  6),
     b'\x89':     sdl2.SDL_Rect(72, 12, 4,  6),    # +
     b'\x99':     sdl2.SDL_Rect(84, 12, 4,  6),    # -
-    b'\xa9':     sdl2.SDL_Rect(66, 12, 4,  6),    # *
     b'\xb9':     sdl2.SDL_Rect(78, 12, 4,  6),    # /
     b'\x0e':     sdl2.SDL_Rect(42, 18, 6,  6),    # ->
     b'\x99':     sdl2.SDL_Rect(84, 12, 4,  6),    # -
     b'\xab':     sdl2.SDL_Rect(72, 18, 2,  6),    # !
     b'\xa8':     sdl2.SDL_Rect(36, 18, 4,  6),    # ^
-    b'\xa9':     sdl2.SDL_Rect(66, 12, 4,  6),    # x
+    b'\xa9':     sdl2.SDL_Rect(66, 12, 4,  6),    # x (aka *)
     b'\xe6\x90': sdl2.SDL_Rect(90, 6,  6,  6),    # <-
     b'\x7f\x40': sdl2.SDL_Rect(0,  36, 18, 6)     # Mat
 }
@@ -254,13 +253,12 @@ TEXT_RECTS = {
     b'-':        sdl2.SDL_Rect(84, 16, 6,  8),
     b'\x89':     sdl2.SDL_Rect(72, 16, 6,  8),    # +
     b'\x99':     sdl2.SDL_Rect(84, 16, 6,  8),    # -
-    b'\xa9':     sdl2.SDL_Rect(66, 16, 6,  8),    # *
     b'\xb9':     sdl2.SDL_Rect(78, 16, 6,  8),    # /
     b'\x0e':     sdl2.SDL_Rect(42, 24, 6,  8),    # ->
     b'\x99':     sdl2.SDL_Rect(84, 16, 6,  8),    # -
     b'\xab':     sdl2.SDL_Rect(72, 24, 6,  8),    # !
     b'\xa8':     sdl2.SDL_Rect(36, 24, 6,  8),    # ^
-    b'\xa9':     sdl2.SDL_Rect(66, 16, 6,  8),    # x
+    b'\xa9':     sdl2.SDL_Rect(66, 16, 6,  8),    # x (aka *)
     b'\xe6\x90': sdl2.SDL_Rect(90, 8,  6,  8),    # <-
     b'\x7f\x40': sdl2.SDL_Rect(0,  48, 24, 8)     # Mat
 }
