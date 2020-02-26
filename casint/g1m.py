@@ -1,6 +1,15 @@
-from common import *
-from ast import *
-from interpreter import *
+from .common import *
+from .ast import *
+from .interpreter import (
+    Lexer,
+    Parser,
+    LexerException,
+    ParserException,
+    Token,
+    is_variable,
+    is_numeric,
+    parse_word_as_number
+)
 
 
 class G1mLexer(Lexer):
@@ -426,6 +435,15 @@ class G1mParser(Parser):
         return results
 
 
+    def statement(self):
+        token = self.current_token
+
+        if token.type == LBRACE:
+            return self.initialize_memory()
+
+        return super().statement()
+
+
     def if_then(self):
         self.eat(IF)
         condition = None
@@ -468,6 +486,21 @@ class G1mParser(Parser):
         return root
 
 
+    def while_loop(self):
+        root = WhileLoop()
+        self.eat(WHILE)
+        if self.try_parse(self.condition):
+            root.condition = self.condition()
+        else:
+            root.condition = self.expr()
+        self.eat(SEMI)
+        nodes = self.statement_list()
+        for node in nodes:
+            root.children.append(node)
+        self.eat(WHILEEND)
+        return root
+
+
     def do_loop_while(self):
         root = DoLpWhile()
         self.eat(DO)
@@ -501,9 +534,20 @@ class G1mParser(Parser):
         return UnaryBuiltin(token, b'Prog', arg1)
 
 
+    def nullary_builtin(self, token, name):
+        self.eat(token.type)
+        return NullaryBuiltin(token, name)
+
+
     def nullary_func(self, token, name):
         self.eat(token.type)
         return NullaryFunc(token, name)
+
+
+    def unary_func(self, token, name):
+        self.eat(token.type)
+        arg1 = self.expr()
+        return UnaryFunc(token, name, arg1)
 
 
     def binary_builtin(self, token, name):
@@ -526,6 +570,20 @@ class G1mParser(Parser):
         else:
             arg3 = self.expr()
         return TernaryBuiltin(token, b'Text', arg1, arg2, arg3)
+
+
+    def locate(self, token):
+        self.eat(LOCATE)
+        arg1 = self.expr()
+        self.eat(COMMA)
+        arg2 = self.expr()
+        self.eat(COMMA)
+        arg3 = None
+        if self.current_token.type == STRING:
+            arg3 = self.string_literal()
+        else:
+            arg3 = self.expr()
+        return TernaryBuiltin(token, b'Locate', arg1, arg2, arg3)
 
 
     def quaternary_builtin(self, token, name):
@@ -557,8 +615,21 @@ class G1mParser(Parser):
 
 
     def assignment_statement(self):
-        left = self.expr()
+        expr = self.expr()
         self.eat(ASSIGN)
-        right = self.assignment_factor_ref()
-        node = Assign(left, right)
+        var = self.assignment_factor_ref()
+        node = Assign(expr, var)
+        return node
+
+
+    def initialize_memory(self):
+        self.eat(LBRACE)
+        x = self.expr()
+        self.eat(COMMA)
+        y = self.expr()
+        self.eat(RBRACE)
+        self.eat(ASSIGN)
+        self.eat(DIM)
+        right = self.memory_structure()
+        node = Initialize((x, y), right)
         return node

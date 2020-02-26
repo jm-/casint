@@ -1,7 +1,7 @@
 import os
 import sys
 
-from decoder import G1mFile, CasioProgram
+from casint.loader import G1mFile, CasioProgram
 
 
 def prepare_output_folder(output_folder):

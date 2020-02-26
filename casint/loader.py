@@ -3,15 +3,19 @@ import struct
 
 import bitstring
 
-from common import translate_string_literal
-from g1m import G1mLexer, G1mParser
-from ucb import UcbLexer, UcbParser
+from .common import translate_casio_bytes_to_ascii, translate_ascii_bytes_to_casio
+from .g1m import G1mLexer, G1mParser
+from .ucb import UcbLexer, UcbParser
+
+
+class InvalidCasioProgramNameException(Exception):
+    pass
 
 
 class CasioProgram(object):
     def __init__(self, name, size, tree):
         self.name = name
-        self.stringname = str(translate_string_literal(name), 'ascii')
+        self.stringname = str(translate_casio_bytes_to_ascii(name), 'ascii')
         self.size = size
         self.tree = tree
 
@@ -133,15 +137,24 @@ class G1mFile(object):
             return programs
 
 
-def load_program_from_ucb_file(filepath):
+def get_program_name_from_filename(filename):
+    program_name = filename.rpartition('.')[0].encode('ascii')
+    if len(program_name) < 1 or len(program_name) > 8:
+        raise InvalidCasioProgramNameException(
+            f'"{program_name}" must be between 1 and 8 characters long'
+        )
+    return translate_ascii_bytes_to_casio(program_name)
+
+
+def load_program_from_ucb_file(filepath, progam_name):
     with open(filepath, 'rb') as fp:
         ucb_data = fp.read()
     lexer = UcbLexer(ucb_data)
     parser = UcbParser(lexer)
     tree = parser.parse()
 
-    program = CasioProgram(
-        os.path.basename(filepath).rpartition('.')[0].encode('ascii'),
+    return CasioProgram(
+        progam_name,
         len(ucb_data),
         tree
     )
@@ -153,7 +166,8 @@ def load_programs_from_ucb_dir(dirpath):
         if not filename.lower().endswith('.ucb'):
             continue
         filepath = os.path.join(dirpath, filename)
-        program = load_program_from_ucb_file(filepath)
+        progam_name = get_program_name_from_filename(filename)
+        program = load_program_from_ucb_file(filepath, progam_name)
         programs.append(program)
     return programs
 

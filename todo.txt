@@ -1,3 +1,3 @@
 # handle sdl events when idle (choosing program)
 # write tool to export CasioProgram to editable file
-* return, break and stop should be keywords
+# return, break and stop should be keywords

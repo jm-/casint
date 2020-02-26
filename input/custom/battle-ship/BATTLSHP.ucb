@@ -1,0 +1,8 @@
+Locate(2, 4, "It works!");
+Locate(2, 5, "-- press any key --");
+
+// wait for enter key
+O = 0; Prog("BATTLSUB");
+
+ClrText();
+Locate(3, 6, "done.");

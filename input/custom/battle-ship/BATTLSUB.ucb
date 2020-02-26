@@ -1,0 +1,7 @@
+if (O == 0) {
+    // wait for enter key
+    K = 0;
+    while (K != 31) {
+        K = GetKey();
+    };
+}

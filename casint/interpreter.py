@@ -1,5 +1,5 @@
-from common import *
-from ast import *
+from .common import *
+from .ast import *
 
 
 class LexerException(Exception):
@@ -106,6 +106,7 @@ class Parser():
         # set current token to the first token taken from the input
         self.current_token = self.lexer.get_next_token()
 
+
     def error(self, message=''):
         raise ParserException(
             f'Invalid syntax:'
@@ -114,6 +115,7 @@ class Parser():
             f' chr={self.lexer.current_char}'
             f' msg={message}'
         )
+
 
     def eat(self, token_type):
         # compare the current token type with the passed token
@@ -124,6 +126,7 @@ class Parser():
             self.current_token = self.lexer.get_next_token()
         else:
             self.error(f'expected {token_type} token')
+
 
     def try_parse(self, parse_func):
         pos = self.lexer.freeze()
@@ -138,6 +141,7 @@ class Parser():
             self.lexer.seek(pos)
             self.current_token = token
 
+
     def program(self):
         root = Program()
         nodes = self.statement_list()
@@ -145,12 +149,12 @@ class Parser():
             root.children.append(node)
         return root
 
+
     def statement(self):
         token = self.current_token
 
         if token.type == CLS:
-            self.eat(CLS)
-            node = NullaryBuiltin(token, b'Cls')
+            node = self.nullary_builtin(token, b'Cls')
 
         elif token.type == COORDOFF:
             self.eat(COORDOFF)
@@ -169,16 +173,14 @@ class Parser():
             node = NullaryBuiltin(token, b'LabelOff')
 
         elif token.type == CLRTEXT:
-            self.eat(CLRTEXT)
-            node = NullaryBuiltin(token, b'ClrText')
+            node = self.nullary_builtin(token, b'ClrText')
 
         elif token.type == STRING:
             node = UnaryBuiltin(token, b'Print', self.string_literal())
 
         elif token.type == COMMENT:
             self.eat(COMMENT)
-            # don't propagate comments to special AST nodes
-            node = self.empty()
+            node = Comment(token)
 
         elif token.type == RETURN:
             self.eat(RETURN)
@@ -239,17 +241,7 @@ class Parser():
             node = self.text(token)
 
         elif token.type == LOCATE:
-            self.eat(LOCATE)
-            arg1 = self.expr()
-            self.eat(COMMA)
-            arg2 = self.expr()
-            self.eat(COMMA)
-            arg3 = None
-            if self.current_token.type == STRING:
-                arg3 = self.string_literal()
-            else:
-                arg3 = self.expr()
-            node = TernaryBuiltin(token, b'Locate', arg1, arg2, arg3)
+            node = self.locate(token)
 
         elif token.type == FLINE:
             node = self.quaternary_builtin(token, b'F_Line')
@@ -290,9 +282,6 @@ class Parser():
         elif token.type == VIEWWINDOW:
             node = self.senary_builtin(token, b'ViewWindow')
 
-        elif token.type == LBRACE:
-            node = self.initialize_memory()
-
         elif token.type == LBRACKET:
             node = self.initialize_memory_values()
 
@@ -309,6 +298,7 @@ class Parser():
 
         return node
 
+
     def inline_if(self):
         condition = None
         if self.try_parse(self.condition):
@@ -322,31 +312,6 @@ class Parser():
             root.if_clause.append(statement)
         return root
 
-    def while_loop(self):
-        root = WhileLoop()
-        self.eat(WHILE)
-        if self.try_parse(self.condition):
-            root.condition = self.condition()
-        else:
-            root.condition = self.expr()
-        self.eat(SEMI)
-        nodes = self.statement_list()
-        for node in nodes:
-            root.children.append(node)
-        self.eat(WHILEEND)
-        return root
-
-    def initialize_memory(self):
-        self.eat(LBRACE)
-        x = self.expr()
-        self.eat(COMMA)
-        y = self.expr()
-        self.eat(RBRACE)
-        self.eat(ASSIGN)
-        self.eat(DIM)
-        right = self.memory_structure()
-        node = Initialize((x, y), right)
-        return node
 
     def initialize_memory_values(self):
         rows = []
@@ -368,6 +333,7 @@ class Parser():
         node = Initialize(rows, right)
         return node
 
+
     def memory_structure(self):
         # TODO: support list too!
         op = self.current_token
@@ -376,6 +342,7 @@ class Parser():
         self.eat(VARIABLE)
         node = MemoryStructure(op, token)
         return node
+
 
     def memory_index(self):
         left = self.memory_structure()
@@ -387,10 +354,12 @@ class Parser():
         node = MemoryIndex(left, (x, y))
         return node
 
+
     def num(self):
         node = Num(self.current_token)
         self.eat(NUMBER)
         return node
+
 
     def num_limited(self, lower, upper):
         node = Num(self.current_token)
@@ -399,18 +368,22 @@ class Parser():
             self.error()
         return node
 
+
     def string_literal(self):
         node = StringLit(self.current_token)
         self.eat(STRING)
         return node
+
 
     def variable(self):
         node = Var(self.current_token)
         self.eat(VARIABLE)
         return node
 
+
     def empty(self):
         return None
+
 
     def condition(self):
         node = self.and_condition()
@@ -423,6 +396,7 @@ class Parser():
 
         return node
 
+
     def and_condition(self):
         node = self.bexp()
 
@@ -433,6 +407,7 @@ class Parser():
             node = BinOp(left=node, op=token, right=self.bexp(), ucb_repr=b'and')
 
         return node
+
 
     def bexp(self):
         token = self.current_token
@@ -472,6 +447,7 @@ class Parser():
         node = BinOp(left=left, op=token, right=self.expr(), ucb_repr=ucb_repr)
         return node
 
+
     def expr(self):
         node = self.term()
 
@@ -488,6 +464,7 @@ class Parser():
             node = BinOp(left=node, op=token, right=self.term(), ucb_repr=ucb_repr)
 
         return node
+
 
     def term(self):
         node = self.expo()
@@ -506,6 +483,7 @@ class Parser():
 
         return node
 
+
     def expo(self):
         node = self.term_shorthand()
 
@@ -523,6 +501,7 @@ class Parser():
 
         return node
 
+
     def term_shorthand(self):
         node = self.factor()
 
@@ -539,6 +518,7 @@ class Parser():
 
         return node
 
+
     def factor(self):
         token = self.current_token
         if token.type == PLUS:
@@ -553,9 +533,7 @@ class Parser():
             self.eat(NUMBER)
             return Num(token)
         elif token.type == RANDNUM:
-            self.eat(RANDNUM)
-            node = NullaryFunc(token, b'RandNum')
-            return node
+            return self.nullary_func(token, b'RandNum')
         elif token.type == PROMPT:
             self.eat(PROMPT)
             node = NullaryFunc(token, b'Prompt')
@@ -571,17 +549,11 @@ class Parser():
             node = BinaryFunc(token, b'PxlTest', arg1, arg2)
             return node
         elif token.type == LOG:
-            self.eat(LOG)
-            node = UnaryFunc(token, b'Log', self.term_shorthand())
-            return node
+            return self.unary_func(token, b'Log')
         elif token.type == INTG:
-            self.eat(INTG)
-            node = UnaryFunc(token, b'Intg', self.term_shorthand())
-            return node
+            return self.unary_func(token, b'Intg')
         elif token.type == FRAC:
-            self.eat(FRAC)
-            node = UnaryFunc(token, b'Frac', self.term_shorthand())
-            return node
+            return self.unary_func(token, b'Frac')
         elif token.type == LPAREN:
             self.eat(LPAREN)
             node = self.expr()
@@ -591,6 +563,7 @@ class Parser():
             node = self.factor_ref()
             return node
 
+
     def factor_ref(self):
         token = self.current_token
         if token.type == MAT:
@@ -599,6 +572,7 @@ class Parser():
         else:
             node = self.variable()
             return node
+
 
     def assignment_factor_ref(self):
         token = self.current_token
@@ -611,6 +585,7 @@ class Parser():
                 self.error()
             node = VariableRange(node, upper)
         return node
+
 
     def parse(self):
         node = self.program()
