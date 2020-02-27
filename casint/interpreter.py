@@ -237,10 +237,10 @@ class Parser():
             node = self.prog(token)
 
         elif token.type == DSZ:
-            node = self.unary_builtin(token, b'Dsz', self.factor_ref)
+            node = self.unary_builtin(token, b'Dsz', self.variable_or_mat_get)
 
         elif token.type == ISZ:
-            node = self.unary_builtin(token, b'Isz', self.factor_ref)
+            node = self.unary_builtin(token, b'Isz', self.variable_or_mat_get)
 
         elif token.type == STOPICT:
             node = self.stopict(token)
@@ -259,26 +259,25 @@ class Parser():
 
         elif token.type == CIRCLE:
             self.eat(CIRCLE)
-            arg1 = self.expr()
+            arg1 = self.expression()
             self.eat(COMMA)
-            arg2 = self.expr()
+            arg2 = self.expression()
             self.eat(COMMA)
-            arg3 = self.expr()
+            arg3 = self.expression()
             node = TernaryBuiltin(token, b'Circle', arg1, arg2, arg3)
 
         elif token.type == HORIZONTAL:
-            return self.unary_builtin(token, b'Horizontal', self.expr)
+            return self.unary_builtin(token, b'Horizontal', self.expression)
 
         elif token.type == PLOTON:
             self.eat(PLOTON)
-            arg1 = self.expr()
+            arg1 = self.expression()
             self.eat(COMMA)
-            arg2 = self.expr()
+            arg2 = self.expression()
             node = BinaryBuiltin(token, b'PlotOn', arg1, arg2)
 
         elif token.type == GRAPHYEQ:
-            self.eat(GRAPHYEQ)
-            node = UnaryBuiltin(token, b'GraphYEq', self.expr())
+            return self.unary_builtin(token, b'GraphYEq', self.expression)
 
         elif token.type == PXLON:
             node = self.binary_builtin(token, b'PxlOn')
@@ -300,8 +299,12 @@ class Parser():
             if self.try_parse(self.assignment_statement):
                 node = self.assignment_statement()
 
-            elif self.try_parse(self.condition) or self.try_parse(self.expr):
-                node = self.inline_if()
+            elif self.try_parse(self.expression):
+                node = self.expression()
+
+                if self.current_token.type == INLINEIF:
+                    # conditional jump, i.e. inline-if
+                    node = self.inline_if(node)
 
             else:
                 node = self.empty()
@@ -309,12 +312,7 @@ class Parser():
         return node
 
 
-    def inline_if(self):
-        condition = None
-        if self.try_parse(self.condition):
-            condition = self.condition()
-        else:
-            condition = self.expr()
+    def inline_if(self, condition):
         root = IfThen(condition)
         self.eat(INLINEIF)
         statement = self.statement()
@@ -355,11 +353,12 @@ class Parser():
 
 
     def memory_index(self):
+        # TODO: support list too!
         left = self.memory_structure()
         self.eat(LBRACKET)
-        x = self.expr()
+        x = self.expression()
         self.eat(COMMA)
-        y = self.expr()
+        y = self.expression()
         self.eat(RBRACKET)
         node = MemoryIndex(left, (x, y))
         return node
@@ -395,153 +394,171 @@ class Parser():
         return None
 
 
-    def condition(self):
-        node = self.and_condition()
+    def expression(self):
+        node = self.and_expression()
 
         while self.current_token.type == OR:
             token = self.current_token
             self.eat(OR)
 
-            node = BinOp(left=node, op=token, right=self.and_condition(), ucb_repr=b'or')
+            node = BinOp(left=node, op=token, right=self.and_expression(), ucb_repr=b'or')
 
         return node
 
 
-    def and_condition(self):
-        node = self.bexp()
+    def and_expression(self):
+        node = self.compare_eq_neq_expression()
 
         while self.current_token.type == AND:
             token = self.current_token
             self.eat(AND)
 
-            node = BinOp(left=node, op=token, right=self.bexp(), ucb_repr=b'and')
+            node = BinOp(left=node, op=token, right=self.compare_eq_neq_expression(), ucb_repr=b'and')
 
         return node
 
 
-    def bexp(self):
-        token = self.current_token
-        if token.type == NOT:
-            self.eat(NOT)
-            node = UnaryOp(token, self.bexp())
-            return node
-        #elif token.type == LPAREN:
-        #    self.eat(LPAREN)
-        #    node = self.condition()
-        #    self.eat(RPAREN)
-        #    return node
+    def compare_eq_neq_expression(self):
+        node = self.compare_lt_gt_expression()
 
-        left = self.expr()
-        token = self.current_token
-        ucb_repr = None
+        while self.current_token.type in (EQ, NEQ):
+            token = self.current_token
+            ucb_repr = None
 
-        if token.type == EQ:
-            self.eat(EQ)
-            ucb_repr = b'=='
-        elif token.type == NEQ:
-            self.eat(NEQ)
-            ucb_repr = b'!='
-        elif token.type == GT:
-            self.eat(GT)
-            ucb_repr = b'>'
-        elif token.type == LT:
-            self.eat(LT)
-            ucb_repr = b'<'
-        elif token.type == GTE:
-            self.eat(GTE)
-            ucb_repr = b'>='
-        else:
-            self.eat(LTE)
-            ucb_repr = b'<='
+            if token.type == EQ:
+                self.eat(EQ)
+                ucb_repr = b'=='
+            else:
+                self.eat(NEQ)
+                ucb_repr = b'!='
 
-        node = BinOp(left=left, op=token, right=self.expr(), ucb_repr=ucb_repr)
+            node = BinOp(left=node, op=token, right=self.compare_lt_gt_expression(), ucb_repr=ucb_repr)
+
         return node
 
 
-    def expr(self):
-        node = self.term()
+    def compare_lt_gt_expression(self):
+        node = self.addition_subtraction_expression()
+
+        while self.current_token.type in (LT, LTE, GTE, GT):
+            token = self.current_token
+            ucb_repr = None
+
+            if token.type == LT:
+                self.eat(LT)
+                ucb_repr = b'<'
+            elif token.type == LTE:
+                self.eat(LTE)
+                ucb_repr = b'<='
+            elif token.type == GTE:
+                self.eat(GTE)
+                ucb_repr = b'>='
+            else:
+                self.eat(GT)
+                ucb_repr = b'>'
+
+            node = BinOp(left=node, op=token, right=self.addition_subtraction_expression(), ucb_repr=ucb_repr)
+
+        return node
+
+
+    def addition_subtraction_expression(self):
+        node = self.multiplication_division_expression()
 
         while self.current_token.type in (PLUS, MINUS):
             token = self.current_token
             ucb_repr = None
+
+            if token.type == PLUS:
+                self.eat(PLUS)
+                ucb_repr = b'+'
+            else:
+                self.eat(MINUS)
+                ucb_repr = b'-'
+
+            node = BinOp(left=node, op=token, right=self.multiplication_division_expression(), ucb_repr=ucb_repr)
+
+        return node
+
+
+    def multiplication_division_expression(self):
+        node = self.unary_expression()
+
+        while self.current_token.type in (MUL, DIV):
+            token = self.current_token
+            ucb_repr = None
+
+            if token.type == MUL:
+                self.eat(MUL)
+                ucb_repr = b'*'
+            else:
+                self.eat(DIV)
+                ucb_repr = b'/'
+
+            node = BinOp(left=node, op=token, right=self.unary_expression(), ucb_repr=ucb_repr)
+
+        return node
+
+
+    def unary_expression(self):
+        if self.current_token.type in (PLUS, MINUS, NOT):
+            token = self.current_token
+            ucb_repr = None
+
             if token.type == PLUS:
                 self.eat(PLUS)
                 ucb_repr = b'+'
             elif token.type == MINUS:
                 self.eat(MINUS)
                 ucb_repr = b'-'
-
-            node = BinOp(left=node, op=token, right=self.term(), ucb_repr=ucb_repr)
-
-        return node
-
-
-    def term(self):
-        node = self.expo()
-
-        while self.current_token.type in (MUL, DIV):
-            token = self.current_token
-            ucb_repr = None
-            if token.type == MUL:
-                self.eat(MUL)
-                ucb_repr = b'*'
-            elif token.type == DIV:
-                self.eat(DIV)
-                ucb_repr = b'/'
-
-            node = BinOp(left=node, op=token, right=self.expo(), ucb_repr=ucb_repr)
-
-        return node
-
-
-    def expo(self):
-        node = self.term_shorthand()
-
-        while self.current_token.type in (POWER, SQUARED):
-            token = self.current_token
-            ucb_repr = None
-            if token.type == POWER:
-                self.eat(POWER)
-                ucb_repr = b'**'
-            if token.type == SQUARED:
-                self.eat(SQUARED)
-                ucb_repr = b'** 2'
-
-            node = BinOp(left=node, op=token, right=self.term_shorthand(), ucb_repr=ucb_repr)
-
-        return node
-
-
-    def term_shorthand(self):
-        node = self.factor()
-
-        while True:
-            token = self.current_token
-            if token.type in (RANDNUM, PROMPT, GETKEY, PXLTEST, INTG, FRAC, LPAREN):
-                token = Token(MUL, b'*')
-                node = BinOp(left=node, op=token, right=self.factor(), ucb_repr=b'*')
-            elif self.try_parse(self.factor_ref):
-                token = Token(MUL, b'*')
-                node = BinOp(left=node, op=token, right=self.factor_ref(), ucb_repr=b'*')
             else:
-                break
+                self.eat(NOT)
+                ucb_repr = b'!'
+
+            return UnaryOp(op=token, expr=self.exponentiation_expression(), ucb_repr=ucb_repr)
+
+        return self.exponentiation_expression()
+
+
+    def exponentiation_expression(self):
+        node = self.implicit_multiplication_expression()
+
+        while self.current_token.type in (POWER,):
+            token = self.current_token
+            ucb_repr = None
+
+            self.eat(POWER)
+            ucb_repr = b'**'
+
+            node = BinOp(left=node, op=token, right=self.implicit_multiplication_expression(), ucb_repr=ucb_repr)
 
         return node
 
 
-    def factor(self):
+    def implicit_multiplication_expression(self):
+        node = self.nullary_expression()
+
+        # multiply adjacent highest-precedence nodes
+        while self.current_token.type in (LPAREN, RANDNUM, PROMPT, GETKEY, LOG, INTG, FRAC, PXLTEST, NUMBER, MAT, VARIABLE):
+            token = Token(MUL, b'*')
+            node = BinOp(left=node, op=token, right=self.nullary_expression(), ucb_repr=b'*')
+
+        return node
+
+
+    def nullary_expression(self):
+        '''
+        Returns a node that is not a bin_op or unary_op
+        '''
         token = self.current_token
-        if token.type == PLUS:
-            self.eat(PLUS)
-            node = UnaryOp(token, self.factor())
+        # scope
+        if token.type == LPAREN:
+            self.eat(LPAREN)
+            node = self.expression()
+            self.eat(RPAREN)
             return node
-        elif token.type == MINUS:
-            self.eat(MINUS)
-            node = UnaryOp(token, self.factor())
-            return node
-        elif token.type == NUMBER:
-            self.eat(NUMBER)
-            return Num(token)
+
+        # function call (produces a value)
         elif token.type == RANDNUM:
             return self.nullary_func(token, b'RandNum')
         elif token.type == PROMPT:
@@ -550,42 +567,41 @@ class Parser():
             return node
         elif token.type == GETKEY:
             return self.nullary_func(token, b'GetKey')
-        elif token.type == PXLTEST:
-            return self.pxltest(token)
         elif token.type == LOG:
             return self.unary_func(token, b'Log')
         elif token.type == INTG:
             return self.unary_func(token, b'Intg')
         elif token.type == FRAC:
             return self.unary_func(token, b'Frac')
-        elif token.type == LPAREN:
-            self.eat(LPAREN)
-            node = self.expr()
-            self.eat(RPAREN)
-            return node
+        elif token.type == PXLTEST:
+            return self.pxltest(token)
+
+        # literal
+        elif token.type == NUMBER:
+            self.eat(NUMBER)
+            return Num(token)
+
+        # variable/mat
         else:
-            node = self.factor_ref()
-            return node
+            return self.variable_or_mat_get()
 
 
-    def factor_ref(self):
+    def variable_or_mat_get(self):
         token = self.current_token
         if token.type == MAT:
-            node = self.memory_index()
-            return node
+            return self.memory_index()
         else:
-            node = self.variable()
-            return node
+            return self.variable()
 
 
-    def assignment_factor_ref(self):
+    def variable_or_mat_set(self):
         token = self.current_token
-        node = self.factor_ref()
+        node = self.variable_or_mat_get()
         if token.type == VARIABLE and self.current_token.type == VARIABLERANGE:
             self.eat(VARIABLERANGE)
             token = self.current_token
-            upper = self.factor_ref()
-            if token.type != VARIABLE or node.value[0] > upper.value[0]:
+            upper = self.variable()
+            if node.value[0] > upper.value[0]:
                 self.error()
             node = VariableRange(node, upper)
         return node

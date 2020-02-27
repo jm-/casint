@@ -1,0 +1,8 @@
+Cls();
+ViewWindow(1, 127, 0, 63, 1, 0);
+
+for (A = 9 to 90 step 4) {
+    F_Line(A, 20, 150 - 2* A, 52);
+}
+
+Text(57, 80, "* debug 2");

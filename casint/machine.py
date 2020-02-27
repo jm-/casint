@@ -617,6 +617,8 @@ class CasioMachine(NodeVisitor):
             return self._visit(node.left) * self._visit(node.right)
         elif node.op.type == DIV:
             return self._visit(node.left) / self._visit(node.right)
+        elif node.op.type == POWER:
+            return self._visit(node.left) ** self._visit(node.right)
         elif node.op.type == EQ:
             l = self._visit(node.left)
             r = self._visit(node.right)

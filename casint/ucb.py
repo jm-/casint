@@ -227,6 +227,9 @@ class UcbLexer(Lexer):
 
             if self.current_char == b'*':
                 self.advance()
+                if self.current_char == b'*':
+                    self.advance()
+                    return Token(POWER, b'^')
                 return Token(MUL, b'x')
 
             if self.current_char == b'/':
@@ -314,11 +317,7 @@ class UcbParser(Parser):
     def if_then(self):
         self.eat(IF)
         self.eat(LPAREN)
-        condition = None
-        if self.try_parse(self.condition):
-            condition = self.condition()
-        else:
-            condition = self.expr()
+        condition = self.expression()
         root = IfThen(condition)
         self.eat(RPAREN)
         nodes = self.statement_list()
@@ -335,15 +334,15 @@ class UcbParser(Parser):
     def for_to(self):
         self.eat(FOR)
         self.eat(LPAREN)
-        var = self.factor_ref()
+        var = self.variable_or_mat_get()
         self.eat(ASSIGN)
-        start = self.expr()
+        start = self.expression()
         self.eat(TO)
-        end = self.expr()
+        end = self.expression()
         step = Num(Token(NUMBER, 1.0))
         if self.current_token.type == STEP:
             self.eat(STEP)
-            step = self.expr()
+            step = self.expression()
         self.eat(RPAREN)
         root = ForTo(start, end, step, var)
         nodes = self.statement_list()
@@ -356,10 +355,7 @@ class UcbParser(Parser):
         root = WhileLoop()
         self.eat(WHILE)
         self.eat(LPAREN)
-        if self.try_parse(self.condition):
-            root.condition = self.condition()
-        else:
-            root.condition = self.expr()
+        root.condition = self.expression()
         self.eat(RPAREN)
         nodes = self.statement_list()
         for node in nodes:
@@ -375,10 +371,7 @@ class UcbParser(Parser):
             root.children.append(node)
         self.eat(WHILE)
         self.eat(LPAREN)
-        if self.try_parse(self.condition):
-            root.condition = self.condition()
-        else:
-            root.condition = self.expr()
+        root.condition = self.expression()
         self.eat(RPAREN)
         return root
 
@@ -432,7 +425,7 @@ class UcbParser(Parser):
     def unary_func(self, token, name):
         self.eat(token.type)
         self.eat(LPAREN)
-        arg1 = self.expr()
+        arg1 = self.expression()
         self.eat(RPAREN)
         return UnaryFunc(token, name, arg1)
 
@@ -440,9 +433,9 @@ class UcbParser(Parser):
     def binary_builtin(self, token, name):
         self.eat(token.type)
         self.eat(LPAREN)
-        arg1 = self.expr()
+        arg1 = self.expression()
         self.eat(COMMA)
-        arg2 = self.expr()
+        arg2 = self.expression()
         self.eat(RPAREN)
         return BinaryBuiltin(token, name, arg1, arg2)
 
@@ -450,9 +443,9 @@ class UcbParser(Parser):
     def pxltest(self, token):
         self.eat(PXLTEST)
         self.eat(LPAREN)
-        arg1 = self.expr()
+        arg1 = self.expression()
         self.eat(COMMA)
-        arg2 = self.expr()
+        arg2 = self.expression()
         self.eat(RPAREN)
         return BinaryFunc(token, b'PxlTest', arg1, arg2)
 
@@ -460,15 +453,15 @@ class UcbParser(Parser):
     def text(self, token):
         self.eat(TEXT)
         self.eat(LPAREN)
-        arg1 = self.expr()
+        arg1 = self.expression()
         self.eat(COMMA)
-        arg2 = self.expr()
+        arg2 = self.expression()
         self.eat(COMMA)
         arg3 = None
         if self.current_token.type == STRING:
             arg3 = self.string_literal()
         else:
-            arg3 = self.expr()
+            arg3 = self.expression()
         self.eat(RPAREN)
         return TernaryBuiltin(token, b'Text', arg1, arg2, arg3)
 
@@ -476,15 +469,15 @@ class UcbParser(Parser):
     def locate(self, token):
         self.eat(LOCATE)
         self.eat(LPAREN)
-        arg1 = self.expr()
+        arg1 = self.expression()
         self.eat(COMMA)
-        arg2 = self.expr()
+        arg2 = self.expression()
         self.eat(COMMA)
         arg3 = None
         if self.current_token.type == STRING:
             arg3 = self.string_literal()
         else:
-            arg3 = self.expr()
+            arg3 = self.expression()
         self.eat(RPAREN)
         return TernaryBuiltin(token, b'Locate', arg1, arg2, arg3)
 
@@ -492,13 +485,13 @@ class UcbParser(Parser):
     def quaternary_builtin(self, token, name):
         self.eat(token.type)
         self.eat(LPAREN)
-        arg1 = self.expr()
+        arg1 = self.expression()
         self.eat(COMMA)
-        arg2 = self.expr()
+        arg2 = self.expression()
         self.eat(COMMA)
-        arg3 = self.expr()
+        arg3 = self.expression()
         self.eat(COMMA)
-        arg4 = self.expr()
+        arg4 = self.expression()
         self.eat(RPAREN)
         return QuaternaryBuiltin(token, name, arg1, arg2, arg3, arg4)
 
@@ -506,25 +499,25 @@ class UcbParser(Parser):
     def senary_builtin(self, token, name):
         self.eat(token.type)
         self.eat(LPAREN)
-        arg1 = self.expr()
+        arg1 = self.expression()
         self.eat(COMMA)
-        arg2 = self.expr()
+        arg2 = self.expression()
         self.eat(COMMA)
-        arg3 = self.expr()
+        arg3 = self.expression()
         self.eat(COMMA)
-        arg4 = self.expr()
+        arg4 = self.expression()
         self.eat(COMMA)
-        arg5 = self.expr()
+        arg5 = self.expression()
         self.eat(COMMA)
-        arg6 = self.expr()
+        arg6 = self.expression()
         self.eat(RPAREN)
         return SenaryBuiltin(token, name, arg1, arg2, arg3, arg4, arg5, arg6)
 
 
     def assignment_statement(self):
-        var = self.assignment_factor_ref()
+        var = self.variable_or_mat_set()
         self.eat(ASSIGN)
-        expr = self.expr()
+        expr = self.expression()
         node = Assign(expr, var)
         return node
 
@@ -534,9 +527,9 @@ class UcbParser(Parser):
         mem_struct = self.memory_structure()
         self.eat(ASSIGN)
         self.eat(LPAREN)
-        x = self.expr()
+        x = self.expression()
         self.eat(COMMA)
-        y = self.expr()
+        y = self.expression()
         self.eat(RPAREN)
         node = Initialize((x, y), mem_struct)
         return node
