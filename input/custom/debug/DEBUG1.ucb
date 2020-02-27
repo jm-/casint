@@ -1,0 +1,41 @@
+ClrText();
+
+// expression not in assignment statement
+A = 1;
+A;
+
+// try looping getkey for a bit
+Locate(1, 1, "testing GetKey()...");
+for (A = 1 to 40) {
+    GetKey();
+}
+Locate(1, 1, "done.              ");
+
+// try order of operations
+A = 3;
+B = 5;
+Locate(1, 2,
+    (3 * A + B / 2)
+);
+
+// test mixing bool and math operations
+Locate(1, 3,
+    A + 2 == B
+);
+
+
+for (X  = 90 to 8 step -1) {
+    Text(50 RandNum(), 100 RandNum() + 2, "x");
+}
+
+Locate(1, 4, 6 -RandNum());
+
+Locate(1, 5, 6 * -RandNum());
+
+Locate(1, 6, 7 - -RandNum());
+
+X = 2 ** 2 RandNum();
+
+F = - 2 ** 2
+
+Locate(1, 7, F);

@@ -39,6 +39,17 @@ class MemoryIndex(AST):
         fp.write(b']')
 
 
+class UnaryOp(AST):
+    def __init__(self, op, expr, ucb_repr):
+        self.op = op
+        self.expr = expr
+        self.ucb_repr = ucb_repr
+
+    def write_ucb(self, fp, indent):
+        fp.write(self.ucb_repr)
+        self.expr.write_ucb(fp, indent)
+
+
 class BinOp(AST):
     def __init__(self, left, op, right, ucb_repr):
         self.left = left
@@ -91,16 +102,6 @@ class Var(AST):
 
     def write_ucb(self, fp, indent):
         fp.write(translate_alpha_mem_char_to_ucb(self.value))
-
-
-class UnaryOp(AST):
-    def __init__(self, op, expr):
-        self.op = op
-        self.expr = expr
-
-    def write_ucb(self, fp, indent):
-        fp.write(self.op.value)
-        self.expr.write_ucb(fp, indent)
 
 
 class Program(AST):

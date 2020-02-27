@@ -446,11 +446,7 @@ class G1mParser(Parser):
 
     def if_then(self):
         self.eat(IF)
-        condition = None
-        if self.try_parse(self.condition):
-            condition = self.condition()
-        else:
-            condition = self.expr()
+        condition = self.expression()
         root = IfThen(condition)
         self.eat(SEMI)
         self.eat(THEN)
@@ -468,15 +464,15 @@ class G1mParser(Parser):
 
     def for_to(self):
         self.eat(FOR)
-        start = self.expr()
+        start = self.expression()
         self.eat(ASSIGN)
-        var = self.factor_ref()
+        var = self.variable_or_mat_get()
         self.eat(TO)
-        end = self.expr()
+        end = self.expression()
         step = Num(Token(NUMBER, 1.0))
         if self.current_token.type == STEP:
             self.eat(STEP)
-            step = self.expr()
+            step = self.expression()
         self.eat(SEMI)
         root = ForTo(start, end, step, var)
         nodes = self.statement_list()
@@ -489,10 +485,7 @@ class G1mParser(Parser):
     def while_loop(self):
         root = WhileLoop()
         self.eat(WHILE)
-        if self.try_parse(self.condition):
-            root.condition = self.condition()
-        else:
-            root.condition = self.expr()
+        root.condition = self.expression()
         self.eat(SEMI)
         nodes = self.statement_list()
         for node in nodes:
@@ -509,10 +502,7 @@ class G1mParser(Parser):
         for node in nodes:
             root.children.append(node)
         self.eat(LPWHILE)
-        if self.try_parse(self.condition):
-            root.condition = self.condition()
-        else:
-            root.condition = self.expr()
+        root.condition = self.expression()
         return root
 
 
@@ -552,96 +542,96 @@ class G1mParser(Parser):
 
     def unary_func(self, token, name):
         self.eat(token.type)
-        arg1 = self.expr()
+        arg1 = self.expression()
         return UnaryFunc(token, name, arg1)
 
 
     def binary_builtin(self, token, name):
         self.eat(token.type)
-        arg1 = self.expr()
+        arg1 = self.expression()
         self.eat(COMMA)
-        arg2 = self.expr()
+        arg2 = self.expression()
         return BinaryBuiltin(token, name, arg1, arg2)
 
 
     def pxltest(self, token):
         self.eat(PXLTEST)
-        arg1 = self.expr()
+        arg1 = self.expression()
         self.eat(COMMA)
-        arg2 = self.expr()
+        arg2 = self.expression()
         self.eat(RPAREN)
         return BinaryFunc(token, b'PxlTest', arg1, arg2)
 
 
     def text(self, token):
         self.eat(TEXT)
-        arg1 = self.expr()
+        arg1 = self.expression()
         self.eat(COMMA)
-        arg2 = self.expr()
+        arg2 = self.expression()
         self.eat(COMMA)
         arg3 = None
         if self.current_token.type == STRING:
             arg3 = self.string_literal()
         else:
-            arg3 = self.expr()
+            arg3 = self.expression()
         return TernaryBuiltin(token, b'Text', arg1, arg2, arg3)
 
 
     def locate(self, token):
         self.eat(LOCATE)
-        arg1 = self.expr()
+        arg1 = self.expression()
         self.eat(COMMA)
-        arg2 = self.expr()
+        arg2 = self.expression()
         self.eat(COMMA)
         arg3 = None
         if self.current_token.type == STRING:
             arg3 = self.string_literal()
         else:
-            arg3 = self.expr()
+            arg3 = self.expression()
         return TernaryBuiltin(token, b'Locate', arg1, arg2, arg3)
 
 
     def quaternary_builtin(self, token, name):
         self.eat(token.type)
-        arg1 = self.expr()
+        arg1 = self.expression()
         self.eat(COMMA)
-        arg2 = self.expr()
+        arg2 = self.expression()
         self.eat(COMMA)
-        arg3 = self.expr()
+        arg3 = self.expression()
         self.eat(COMMA)
-        arg4 = self.expr()
+        arg4 = self.expression()
         return QuaternaryBuiltin(token, name, arg1, arg2, arg3, arg4)
 
 
     def senary_builtin(self, token, name):
         self.eat(token.type)
-        arg1 = self.expr()
+        arg1 = self.expression()
         self.eat(COMMA)
-        arg2 = self.expr()
+        arg2 = self.expression()
         self.eat(COMMA)
-        arg3 = self.expr()
+        arg3 = self.expression()
         self.eat(COMMA)
-        arg4 = self.expr()
+        arg4 = self.expression()
         self.eat(COMMA)
-        arg5 = self.expr()
+        arg5 = self.expression()
         self.eat(COMMA)
-        arg6 = self.expr()
+        arg6 = self.expression()
         return SenaryBuiltin(token, name, arg1, arg2, arg3, arg4, arg5, arg6)
 
 
     def assignment_statement(self):
-        expr = self.expr()
+        expr = self.expression()
         self.eat(ASSIGN)
-        var = self.assignment_factor_ref()
+        var = self.variable_or_mat_set()
         node = Assign(expr, var)
         return node
 
 
     def initialize_memory(self):
         self.eat(LBRACE)
-        x = self.expr()
+        x = self.expression()
         self.eat(COMMA)
-        y = self.expr()
+        y = self.expression()
         self.eat(RBRACE)
         self.eat(ASSIGN)
         self.eat(DIM)
