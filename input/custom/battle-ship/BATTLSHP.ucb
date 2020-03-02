@@ -1,17 +1,48 @@
-ClrText();
-Locate(2, 4, "It works!");
-Locate(2, 5, "-- press any key --");
+ViewWindow(1, 127, 0, 63, 1, 0);
 
-// wait for enter key
-O = 0; Prog("BATTLSUB");
-
-// animate progress bar for a bit
-O = 1; Prog("BATTLSUB");
-O = 2; F = 30;
-for (A = 1 to 100) {
-    Prog("BATTLSUB");
-    theta = GetKey();
+// draw board
+for (A = 1 to 61 step 6)
+{
+    F_Line(A, 1, A, 61);
+    F_Line(1, A, 61, A);
+    F_Line(65 + A, 1, 65 + A, 61);
+    F_Line(66, A, 126, A);
 }
 
-ClrText();
-Locate(3, 6, "done.");
+StoPict(9);
+dim Mat B = (10, 10);
+
+// prompt to place ships
+O = 1; Prog("BATTLSUB");
+Text(27, 43, "PLACE SHIPS!");
+Text(35, 35, "(press any key)");
+O = 0; Prog("BATTLSUB");
+
+// choose ships
+for (T = 1 to 5) {
+    if (T == 1) { S = 5; }
+    if (T == 2) { S = 4; }
+    if (T == 3) { S = 3; }
+    if (T == 4) { S = 3; }
+    if (T == 5) { S = 2; }
+    O = 3; Prog("BATTLSUB");
+    // store ship in Mat B
+    if (P == 0) {
+        // horizontal
+        for (A = M to M + S - 1) {
+            Mat B [A, N] = 1;
+        }
+    } else {
+        // vertical
+        for (A = N to N + S - 1) {
+            Mat B [M, A] = 1;
+        }
+    }
+    // update the stored pic
+    O = 4; Prog("BATTLSUB");
+    StoPict(9);
+}
+
+O = 1; Prog("BATTLSUB");
+Text(30, 44, "GET READY!");
+O = 0; Prog("BATTLSUB");
