@@ -8,6 +8,10 @@ from .g1m import G1mLexer, G1mParser
 from .ucb import UcbLexer, UcbParser
 
 
+class InvalidCasioItemTypeException(Exception):
+    pass
+
+
 class InvalidCasioProgramNameException(Exception):
     pass
 
@@ -72,6 +76,24 @@ class G1mFile(object):
         return numItems
 
 
+    def _read_program(self, itemTitle, itemData):
+        # first 10 bytes are reserved
+        lexer = G1mLexer(itemData[10:], self.filepath)
+        parser = G1mParser(lexer)
+        tree = parser.parse()
+
+        program = CasioProgram(
+            itemTitle.partition(b'\x00')[0],
+            len(itemData),
+            tree
+        )
+        return program
+
+
+    def _read_pict(self, item_title, item_data):
+        return None
+
+
     def _read_item(self, fp):
         itemHeader1 = fp.read(20)
 
@@ -109,32 +131,29 @@ class G1mFile(object):
         itemData = fp.read(itemLength)
 
         # make sure the item is a program
-        assert itemTypeIdentifier == 0x01
+        if itemTypeIdentifier == 0x01:
+            return self._read_program(itemTitle, itemData)
 
-        # first 10 bytes are reserved
-        lexer = G1mLexer(itemData[10:], self.filepath)
-        parser = G1mParser(lexer)
-        tree = parser.parse()
+        elif itemTypeIdentifier == 0x07:
+            return self._read_pict(itemTitle, itemData)
 
-        program = CasioProgram(
-            itemTitle.partition(b'\x00')[0],
-            len(itemData),
-            tree
-        )
-        return program
+        else:
+            raise InvalidCasioItemTypeException(
+                f"Unknown item type: {itemTypeIdentifier}"
+            )
 
 
     def load(self):
         with open(self.filepath, 'rb') as fp:
             numItems = self._read_header(fp)
-            programs = [None] * numItems
+            items = [None] * numItems
             i = 0
             while i < numItems:
                 if self.debug:
                     print(f'---------- reading item {i}')
-                programs[i] = self._read_item(fp)
+                items[i] = self._read_item(fp)
                 i += 1
-            return programs
+            return items
 
 
 def get_program_name_from_filename(filename):
