@@ -4,6 +4,7 @@ if (O == 0) {
     while (K != 31) {
         K = GetKey();
     };
+    return;
 }
 
 // draws a box on the graph screen
@@ -17,6 +18,7 @@ if (O == 1) {
     F_Line(98, 22, 98, 42);
     F_Line(31, 43, 99, 43);
     F_Line(99, 23, 99, 43);
+    return;
 }
 
 // updates the display of an indeterminate progress bar
@@ -26,4 +28,99 @@ if (O == 2) {
     if (F == 34) {
         F = 30;
     }
+    return;
+}
+
+// place the ship specified by S (1-5)
+if (O == 3) {
+    M = 1; N = 1; P = 0;
+    A = 0;
+    do {
+        // flash the ship
+        RclPict(9);
+        if (Frac(A/2) == 0) {
+            O = 4; Prog("BATTLSUB");
+        }
+        do {
+            A = A + 2;
+            K = GetKey();
+        } while (K != 31 and K != 38 and K != 27 and K != 28 and K != 37 and K != 48 and A < 5);
+        if (K == 38 and M > 1) {
+            M = M - 1;
+        }
+        if (K == 27 and P == 0 and (M + S) <= 10) {
+            M = M + 1;
+        }
+        if (K == 27 and P == 1 and M <= 9) {
+            M = M + 1;
+        }
+        if (K == 28 and N > 1) {
+            N = N - 1;
+        }
+        if (K == 37 and P == 1 and (N + S) <= 10) {
+            N = N + 1;
+        }
+        if (K == 37 and P == 0 and N <= 9) {
+            N = N + 1;
+        }
+
+        if (K == 48) {
+            if (P == 0) {
+                // change orientation to vertical
+                if ((N + S) <= 11) {
+                    P = 1;
+                }
+            } else {
+                // change orientation to horizontal
+                if ((M + S) <= 11) {
+                    P = 0;
+                }
+            }
+        }
+
+        if (K == 31) {
+            // check if this position is valid.
+            // if so, break.
+            B = 0;
+            if (P == 0) {
+                // horizontal
+                for (A = M to M + S - 1) {
+                    if (Mat B [A, N] == 1) {
+                        B = 1;
+                        break;
+                    }
+                }
+            } else {
+                // vertical
+                for (A = N to N + S - 1) {
+                    if (Mat B [M, A] == 1) {
+                        B = 1;
+                        break;
+                    }
+                }
+            }
+
+            if (B == 0) {
+                break;
+            }
+        }
+
+        A = 5 - A;
+
+    } while (1);
+    return;
+}
+
+// draw ship of size S in (M, N) with position P (0 = h, 1 = v)
+if (O == 4) {
+    if (P == 0) {
+        F_Line(6 * M + 63, 6 * N - 3, 6 * (M + S) + 57, 6 * N - 3);
+        F_Line(6 * M + 62, 6 * N - 2, 6 * (M + S) + 58, 6 * N - 2);
+        F_Line(6 * M + 63, 6 * N - 1, 6 * (M + S) + 57, 6 * N - 1);
+    } else {
+        F_Line(6 * M + 62, 6 * N - 2, 6 * M + 62, 6 * (N + S) - 8);
+        F_Line(6 * M + 63, 6 * N - 3, 6 * M + 63, 6 * (N + S) - 7);
+        F_Line(6 * M + 64, 6 * N - 2, 6 * M + 64, 6 * (N + S) - 8);
+    }
+    return;
 }
