@@ -114,6 +114,19 @@
             ],
             "cwd": "${workspaceFolder}",
             "console": "integratedTerminal"
+        },
+        {
+            "name": "pict (unpack)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/g1mtool.py",
+            "args": [
+                "unpack",
+                "input/pict/PICT1.G1M",
+                "output/pict/"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
         }
     ]
 }

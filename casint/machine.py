@@ -239,9 +239,9 @@ class CasioMachine(NodeVisitor):
             aspectRatio = float(width) / float(height)
             if aspectRatio != ASPECT_RATIO:
                 if aspectRatio > ASPECT_RATIO:
-                    height = int(float(width) / ASPECT_RATIO)
-                else:
                     width = int(ASPECT_RATIO * float(height))
+                else:
+                    height = int(float(width) / ASPECT_RATIO)
                 sdl2.SDL_SetWindowSize(self.window, width, height)
 
     def _handle_events(self, pump=True, delay=True):
