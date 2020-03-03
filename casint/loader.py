@@ -12,16 +12,37 @@ class InvalidCasioItemTypeException(Exception):
     pass
 
 
-class InvalidCasioProgramNameException(Exception):
+class InvalidCasioItemNameException(Exception):
     pass
 
 
-class CasioProgram(object):
-    def __init__(self, name, size, tree):
+class CasioItem():
+    def __init__(self, name):
         self.name = name
         self.stringname = str(translate_casio_bytes_to_ascii(name), 'ascii')
+
+
+    def get_ucb_filename(self):
+        raise NotImplementedError()
+
+
+    def write_ucb(self, fp):
+        raise NotImplementedError()
+
+
+class CasioProgram(CasioItem):
+    def __init__(self, name, size, tree):
+        super().__init__(name)
         self.size = size
         self.tree = tree
+
+
+    def get_ucb_filename(self):
+        return f"{self.stringname}.ucb"
+
+
+    def write_ucb(self, fp):
+        self.tree.write_ucb(fp, 0)
 
 
     def __str__(self):
@@ -34,112 +55,187 @@ class CasioProgram(object):
         return self.__str__()
 
 
-class G1mFile(object):
+class CasioPict(CasioItem):
+    def __init__(self, name, packed_bytes):
+        super().__init__(name)
+        self.packed_bytes = packed_bytes
+
+
+    def get_ucb_filename(self):
+        return f"{self.stringname}.ucp"
+
+
+    def write_ucb(self, fp):
+        # write out characters for each pixel
+        image_bits = bitstring.Bits(bytes=self.packed_bytes)
+        x = 0
+        for pixel in image_bits:
+            if pixel:
+                fp.write(b'#')
+            else:
+                fp.write(b' ')
+            x += 1
+            if x == 128:
+                fp.write(b'\n')
+                x = 0
+
+
+    def get_texture(self):
+        # TODO
+        image_bits = bitstring.Bits(bytes=self.packed_bytes)
+
+
+    def __str__(self):
+        return f'{self.stringname:8s}'
+
+
+    def __repr__(self):
+        return self.__str__()
+
+
+class CasioItemCollection():
+    '''
+    Collection of items for a casio machine
+    '''
+    def __init__(self, items):
+        self.items = items
+        self.program_count = len(self.get_programs())
+
+
+    def get_program_by_name(self, name):
+        for item in self.items:
+            if type(item) is CasioProgram and item.name == name:
+                return item
+
+
+    def get_program_by_index(self, index):
+        return self.get_programs()[index]
+
+
+    def get_programs(self):
+        return list(filter(
+            lambda i: type(i) is CasioProgram,
+            self.items
+        ))
+
+
+    def get_program_names(self):
+        return list(map(
+            lambda p: p.stringname,
+            self.get_programs()
+        ))
+
+
+class G1mFile():
     def __init__(self, filepath, debug=False):
         self.filepath = filepath
         self.debug = debug
 
 
     def _read_header(self, fp):
-        headerBytes = fp.read(32)
-        headerBits = bitstring.Bits(bytes=headerBytes)
+        header_bytes = fp.read(32)
+        header_bits = bitstring.Bits(bytes=header_bytes)
 
-        headerIbits = ~headerBits
-        headerIbytes = headerIbits.tobytes()
+        header_i_bits = ~header_bits
+        header_i_bytes = header_i_bits.tobytes()
 
-        (   fileIdentifier,
-            fileTypeIdentifier,
-            magicSequence1,
-            controlByte1,
-            magicSequence2,
-            totalFileSize,
-            controlByte2,
-            reservedSequence1,
-            numItems
-        ) = struct.unpack('>8sB5sB1sIB9sH', headerIbytes)
+        (   file_identifier,
+            file_type_identifier,
+            magic_sequence_1,
+            control_byte_1,
+            magic_sequence_2,
+            total_file_size,
+            control_byte_2,
+            reserved_sequence_1,
+            num_items
+        ) = struct.unpack('>8sB5sB1sIB9sH', header_i_bytes)
 
         if self.debug:
-            print(f'fileIdentifier={fileIdentifier}')
-            print(f'fileTypeIdentifier={fileTypeIdentifier}')
-            print(f'totalFileSize={totalFileSize}')
-            print(f'numItems={numItems}')
+            print(f'file_identifier={file_identifier}')
+            print(f'file_type_identifier={file_type_identifier}')
+            print(f'total_file_size={total_file_size}')
+            print(f'num_items={num_items}')
 
         # validate the control bytes
-        lsb = totalFileSize % 256
-        assert (lsb + 0x41) % 256 == controlByte1
-        assert (lsb + 0xb8) % 256 == controlByte2
+        lsb = total_file_size % 256
+        assert (lsb + 0x41) % 256 == control_byte_1
+        assert (lsb + 0xb8) % 256 == control_byte_2
 
         # validate magic sequences
-        assert magicSequence1 == b'\x00\x10\x00\x10\x00'
-        assert magicSequence2 == b'\x01'
+        assert magic_sequence_1 == b'\x00\x10\x00\x10\x00'
+        assert magic_sequence_2 == b'\x01'
 
-        return numItems
+        return num_items
 
 
-    def _read_program(self, itemTitle, itemData):
+    def _read_program(self, item_title, item_data):
         # first 10 bytes are reserved
-        lexer = G1mLexer(itemData[10:], self.filepath)
+        lexer = G1mLexer(item_data[10:], self.filepath)
         parser = G1mParser(lexer)
         tree = parser.parse()
 
         program = CasioProgram(
-            itemTitle.partition(b'\x00')[0],
-            len(itemData),
+            item_title.partition(b'\x00')[0],
+            len(item_data),
             tree
         )
         return program
 
 
     def _read_pict(self, item_title, item_data):
-        return None
+        pict = CasioPict(
+            item_title.partition(b'\x00')[0],
+            item_data
+        )
+        return pict
 
 
     def _read_item(self, fp):
-        itemHeader1 = fp.read(20)
+        item_header_1 = fp.read(20)
 
-        (   itemIdentifier,
-            reservedSequence1,
-            itemHeaderTypeIdentifier
-        ) = struct.unpack('>16s3sB', itemHeader1)
+        (   item_identifier,
+            reserved_sequence_1,
+            item_header_type_identifier
+        ) = struct.unpack('>16s3sB', item_header_1)
 
         if self.debug:
-            print(f'itemIdentifier={itemIdentifier}')
-            print(f'reservedSequence1={reservedSequence1}')
-            print(f'itemHeaderTypeIdentifier={itemHeaderTypeIdentifier}')
+            print(f'item_identifier={item_identifier}')
+            print(f'reserved_sequence_1={reserved_sequence_1}')
+            print(f'item_header_type_identifier={item_header_type_identifier}')
 
         # make sure we're dealing with a known item type,
-        # so that itemHeader2 can be safely decoded
-        assert itemHeaderTypeIdentifier == 0x01
+        # so that item_header_2 can be safely decoded
+        assert item_header_type_identifier == 0x01
 
-        itemHeader2 = fp.read(24)
+        item_header_2 = fp.read(24)
 
-        (   memLocationName,
-            itemTitle,
-            itemTypeIdentifier,
-            itemLength,
-            reservedSequence2
-        ) = struct.unpack('>8s8sBI3s', itemHeader2)
+        (   mem_location_name,
+            item_title,
+            item_type_identifier,
+            item_length,
+            reserved_sequence_2
+        ) = struct.unpack('>8s8sBI3s', item_header_2)
 
         if self.debug:
-            print(f'memLocationName={memLocationName}')
-            print(f'itemTitle={itemTitle}')
-            print(f'itemTypeIdentifier={itemTypeIdentifier}')
-            print(f'itemLength={itemLength}')
-            print(f'reservedSequence2={reservedSequence2}')
+            print(f'mem_location_name={mem_location_name}')
+            print(f'item_title={item_title}')
+            print(f'item_type_identifier={item_type_identifier}')
+            print(f'item_length={item_length}')
+            print(f'reserved_sequence_2={reserved_sequence_2}')
 
         # read the rest of the item
-        itemData = fp.read(itemLength)
+        item_data = fp.read(item_length)
 
         # make sure the item is a program
-        if itemTypeIdentifier == 0x01:
-            return self._read_program(itemTitle, itemData)
+        if item_type_identifier == 0x01:
+            return self._read_program(item_title, item_data)
 
-        elif itemTypeIdentifier == 0x07:
-            return self._read_pict(itemTitle, itemData)
+        elif item_type_identifier == 0x07:
+            return self._read_pict(item_title, item_data)
 
         else:
             raise InvalidCasioItemTypeException(
-                f"Unknown item type: {itemTypeIdentifier}"
+                f"Unknown item type: {item_type_identifier}"
             )
 
 
@@ -156,18 +252,19 @@ class G1mFile(object):
             return items
 
 
-def get_program_name_from_filename(filename):
-    program_name = filename.rpartition('.')[0].encode('ascii')
-    if len(program_name) < 1 or len(program_name) > 8:
-        raise InvalidCasioProgramNameException(
-            f'"{program_name}" must be between 1 and 8 characters long'
+def get_item_name_from_filename(filename):
+    item_name = filename.rpartition('.')[0].encode('ascii')
+    if len(item_name) < 1 or len(item_name) > 8:
+        raise InvalidCasioItemNameException(
+            f'"{item_name}" must be between 1 and 8 characters long'
         )
-    return translate_ascii_bytes_to_casio(program_name)
+    return translate_ascii_bytes_to_casio(item_name)
 
 
 def load_program_from_ucb_file(filepath, progam_name):
     with open(filepath, 'rb') as fp:
         ucb_data = fp.read()
+
     lexer = UcbLexer(ucb_data, filepath)
     parser = UcbParser(lexer)
     tree = parser.parse()
@@ -179,18 +276,34 @@ def load_program_from_ucb_file(filepath, progam_name):
     )
 
 
-def load_programs_from_ucb_dir(dirpath):
-    programs = []
+def load_pict_from_ucb_file(filepath, pict_name):
+    with open(filepath, 'rb') as fp:
+        ucb_data = fp.read()
+
+    return CasioPict(pict_name, None)
+
+
+def load_items_from_ucb_dir(dirpath):
+    items = []
     for filename in os.listdir(dirpath):
-        if not filename.lower().endswith('.ucb'):
-            continue
         filepath = os.path.join(dirpath, filename)
-        progam_name = get_program_name_from_filename(filename)
-        program = load_program_from_ucb_file(filepath, progam_name)
-        programs.append(program)
-    return programs
+        if filename.lower().endswith('.ucb'):
+            item = load_program_from_ucb_file(
+                filepath,
+                get_item_name_from_filename(filename)
+            )
+        elif filename.lower().endswith('.ucp'):
+            item = load_pict_from_ucb_file(
+                filepath,
+                get_item_name_from_filename(filename)
+            )
+        else:
+            continue
+        items.append(item)
+    return CasioItemCollection(items)
 
 
-def load_programs_from_g1m_file(filepath):
+def load_items_from_g1m_file(filepath):
     g1mfile = G1mFile(filepath, debug=False)
-    return g1mfile.load()
+    items = g1mfile.load()
+    return CasioItemCollection(items)
