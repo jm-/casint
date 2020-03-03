@@ -56,9 +56,13 @@ class CasioProgram(CasioItem):
 
 
 class CasioPict(CasioItem):
-    def __init__(self, name, packed_bytes):
+    def __init__(self, name, image_bits):
         super().__init__(name)
-        self.packed_bytes = packed_bytes
+        assert self.stringname.startswith('PICT')
+        num = int(self.stringname[4:])
+        assert num >= 1 and num <= 20
+        self.num = num
+        self.image_bits = image_bits
 
 
     def get_ucb_filename(self):
@@ -67,9 +71,8 @@ class CasioPict(CasioItem):
 
     def write_ucb(self, fp):
         # write out characters for each pixel
-        image_bits = bitstring.Bits(bytes=self.packed_bytes)
         x = 0
-        for pixel in image_bits:
+        for pixel in self.image_bits:
             if pixel:
                 fp.write(b'#')
             else:
@@ -78,11 +81,6 @@ class CasioPict(CasioItem):
             if x == 128:
                 fp.write(b'\n')
                 x = 0
-
-
-    def get_texture(self):
-        # TODO
-        image_bits = bitstring.Bits(bytes=self.packed_bytes)
 
 
     def __str__(self):
@@ -115,6 +113,13 @@ class CasioItemCollection():
     def get_programs(self):
         return list(filter(
             lambda i: type(i) is CasioProgram,
+            self.items
+        ))
+
+
+    def get_picts(self):
+        return list(filter(
+            lambda i: type(i) is CasioPict,
             self.items
         ))
 
@@ -185,7 +190,7 @@ class G1mFile():
     def _read_pict(self, item_title, item_data):
         pict = CasioPict(
             item_title.partition(b'\x00')[0],
-            item_data
+            bitstring.Bits(bytes=item_data[:1024])
         )
         return pict
 
@@ -277,10 +282,15 @@ def load_program_from_ucb_file(filepath, progam_name):
 
 
 def load_pict_from_ucb_file(filepath, pict_name):
+    image_bits = bitstring.BitArray(length=128 * 64)
     with open(filepath, 'rb') as fp:
-        ucb_data = fp.read()
+        lines = fp.readlines()
 
-    return CasioPict(pict_name, None)
+    for y, line in enumerate(lines):
+        for x, c in enumerate(line.rstrip(b'\r\n')):
+            image_bits[y * 128 + x] = (c != 0x20)
+
+    return CasioPict(pict_name, image_bits)
 
 
 def load_items_from_ucb_dir(dirpath):
