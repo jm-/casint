@@ -93,11 +93,11 @@ class CasioMachine(NodeVisitor):
         self.key = None
 
         # initialize
-        self._initialize_vars()
-        self._initialize_mats()
-        self._initialize_pics()
         self._initialize_sdl2()
         self._initialize_text()
+        self._initialize_vars()
+        self._initialize_mats()
+        self._initialize_picts()
 
         self._refresh_screen()
 
@@ -111,8 +111,11 @@ class CasioMachine(NodeVisitor):
     def _initialize_mats(self):
         self.mats = dict()
 
-    def _initialize_pics(self):
-        self.pics = dict()
+    def _initialize_picts(self):
+        self.picts = dict()
+        for pict in self.items.get_picts():
+            texture = self._create_texture_from_pict(pict)
+            self.picts[pict.num] = texture
 
     def _initialize_sdl2(self):
         sdl2.SDL_Init(sdl2.SDL_INIT_VIDEO)
@@ -206,6 +209,46 @@ class CasioMachine(NodeVisitor):
         sdl2.SDL_FreeSurface(surface)
         return texture, inverted_texture
 
+
+    def _create_texture_from_pict(self, pict):
+        print(f'Initializing pict: {pict.stringname}')
+
+        width = 128
+        height = 64
+        pixelsize = 3
+        bytecount = width * height * pixelsize
+        assert len(pict.image_bits) * pixelsize == bytecount
+
+        # create memory for pixel data
+        new_p = (ctypes.c_uint8 * bytecount)()
+        ref_p = ctypes.byref(new_p)
+
+        # set pixels
+        m = memoryview(new_p).cast('B')
+        i = 0
+        j = pixelsize
+        for pixel in pict.image_bits:
+            if pixel:
+
+
+                m[i:j] = b'\x10\x10\x10'
+            else:
+                m[i:j] = b'\xee\xe8\xe8'
+            i += pixelsize
+            j += pixelsize
+
+        new_surface = sdl2.SDL_CreateRGBSurfaceWithFormatFrom(
+            ref_p,
+            width,
+            height,
+            8 * pixelsize,
+            width * pixelsize,
+            sdl2.SDL_PIXELFORMAT_BGR24
+        )
+        texture = sdl2.SDL_CreateTextureFromSurface(self.renderer, new_surface)
+        sdl2.SDL_FreeSurface(new_surface)
+        return texture
+
     def _render_begin(self, texture_target):
         self.current_texture = texture_target
         sdl2.SDL_SetRenderTarget(self.renderer, self.current_texture)
@@ -272,9 +315,9 @@ class CasioMachine(NodeVisitor):
         sdl2.SDL_DestroyTexture(self.font_text_inverted)
         sdl2.SDL_DestroyTexture(self.font_graph)
         sdl2.SDL_DestroyTexture(self.font_graph_inverted)
-        # clean up stored pics
-        for pic in list(self.pics.values()):
-            sdl2.SDL_DestroyTexture(pic)
+        # clean up stored picts
+        for pict in list(self.picts.values()):
+            sdl2.SDL_DestroyTexture(pict)
         sdl2.SDL_DestroyWindow(self.window)
         sdl2.SDL_DestroyRenderer(self.renderer)
         sdl2.SDL_Quit()
@@ -309,23 +352,23 @@ class CasioMachine(NodeVisitor):
             pass
         #print(f'DBG: returned from subroutine: {name}')
 
-    def _save_pic(self, num):
-        pic = self.pics.get(num)
-        if not pic:
-            pic = sdl2.SDL_CreateTexture(
+    def _save_pict(self, num):
+        pict = self.picts.get(num)
+        if not pict:
+            pict = sdl2.SDL_CreateTexture(
                 self.renderer, sdl2.SDL_PIXELFORMAT_RGBA8888,
                 sdl2.SDL_TEXTUREACCESS_TARGET, 128, 64)
-            self.pics[num] = pic
-        # render current texture to pic
-        sdl2.SDL_SetRenderTarget(self.renderer, pic)
+            self.picts[num] = pict
+        # render current texture to pict
+        sdl2.SDL_SetRenderTarget(self.renderer, pict)
         sdl2.SDL_RenderCopy(self.renderer, self.texture_graph, None, None)
         sdl2.SDL_SetRenderTarget(self.renderer, None)
 
-    def _load_pic(self, num):
-        pic = self.pics[num]
-        # render pic to current texture
+    def _load_pict(self, num):
+        pict = self.picts[num]
+        # render pict to current texture
         self._render_begin(self.texture_graph)
-        sdl2.SDL_RenderCopy(self.renderer, pic, None, None)
+        sdl2.SDL_RenderCopy(self.renderer, pict, None, None)
         self._render_end()
 
     def _locate_out(self, message):
@@ -520,10 +563,10 @@ class CasioMachine(NodeVisitor):
             self._run_prog(name)
         elif node.op.type == STOPICT:
             num = self._visit(node.arg1)
-            self._save_pic(int(num))
+            self._save_pict(int(num))
         elif node.op.type == RCLPICT:
             num = self._visit(node.arg1)
-            self._load_pic(int(num))
+            self._load_pict(int(num))
         elif node.op.type == ISZ:
             # NB: this is an incomplete impl!
             self._assign(self._retrieve(node.arg1) + 1, node.arg1)
