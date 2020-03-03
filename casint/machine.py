@@ -5,6 +5,7 @@ from random import random as rand_num
 import sdl2
 
 from .common import *
+from .loader import CasioProgram, CasioPict
 from .interpreter import Var, VariableRange, MemoryIndex, Label
 from .graphics import setpixel, pxltest, fline, text, locate
 
@@ -70,7 +71,7 @@ class InterpreterQuitException(Exception):
 
 class GotoException(Exception):
     def __init__(self, node):
-        super(GotoException, self).__init__()
+        super().__init__()
         self.node = node
 
 
@@ -86,12 +87,10 @@ class NodeVisitor(object):
 
 
 class CasioMachine(NodeVisitor):
-    def __init__(self, programs):
-        self.key = None
+    def __init__(self, items):
+        self.items = items
 
-        self.programs = {}
-        for program in programs:
-            self.programs[program.name] = program
+        self.key = None
 
         # initialize
         self._initialize_vars()
@@ -281,7 +280,7 @@ class CasioMachine(NodeVisitor):
         sdl2.SDL_Quit()
 
     def run(self, name):
-        program = self.programs.get(name)
+        program = self.items.get_program_by_name(name)
         self._set_window_title(program.stringname)
         try:
             self._visit(program.tree)
@@ -302,7 +301,7 @@ class CasioMachine(NodeVisitor):
     # =========================================================================
 
     def _run_prog(self, name):
-        program = self.programs.get(name)
+        program = self.items.get_program_by_name(name)
         #print(f'DBG: entering subroutine: {name}')
         try:
             self._visit(program.tree)
