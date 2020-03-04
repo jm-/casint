@@ -9,13 +9,18 @@ for (A = 1 to 61 step 6)
     F_Line(66, A, 126, A);
 }
 
-StoPict(9);
-dim Mat B = (10, 10);
+StoPict(5);
+dim Mat B = (11, 26);
+// initialize remaining block counts
+Mat B [11, 21] = 17;
+Mat B [11, 22] = 17;
+// initialize the turn counter
+Mat B [11, 23] = 0;
 
 // prompt to place ships
 O = 1; Prog("BATTLSUB");
-Text(27, 43, "PLACE SHIPS!");
-Text(35, 35, "(press any key)");
+Text(27, 42, "PLACE SHIPS!");
+Text(35, 44, "(press EXE)");
 O = 0; Prog("BATTLSUB");
 
 // choose ships
@@ -25,24 +30,61 @@ for (T = 1 to 5) {
     if (T == 3) { S = 3; }
     if (T == 4) { S = 3; }
     if (T == 5) { S = 2; }
+
+    // user places ship S
     O = 3; Prog("BATTLSUB");
-    // store ship in Mat B
-    if (P == 0) {
-        // horizontal
-        for (A = M to M + S - 1) {
-            Mat B [A, N] = 1;
-        }
-    } else {
-        // vertical
-        for (A = N to N + S - 1) {
-            Mat B [M, A] = 1;
-        }
-    }
+    O = 7; Q = 10; Prog("BATTLSUB");
+
     // update the stored pic
-    O = 4; Prog("BATTLSUB");
-    StoPict(9);
+    O = 4; Q = 10; Prog("BATTLSUB");
+    StoPict(5);
+
+    // AI places ship S
+    O = 5; Prog("BATTLSUB");
+    O = 7; Q = 0; Prog("BATTLSUB");
 }
 
+// prompt to place ships
 O = 1; Prog("BATTLSUB");
-Text(30, 44, "GET READY!");
+Text(27, 46, "YOU START!");
+Text(35, 44, "(press EXE)");
 O = 0; Prog("BATTLSUB");
+
+// main game loop
+while (1) {
+    // user chooses position
+    O = 8; Prog("BATTLSUB");
+    // store the hit
+    O = 9; Q = 0; Prog("BATTLSUB");
+    // check win condition
+    if (Mat B [11, 21] == 0) {
+        W = 10;
+        break;
+    }
+
+    O = 1; Prog("BATTLSUB");
+    Text(27, 48, "THINKING");
+
+    // AI chooses position
+    O = 10; Prog("BATTLSUB");
+    // store the hit
+    O = 9; Q = 10; Prog("BATTLSUB");
+    // check win condition
+    if (Mat B [11, 22] == 0) {
+        W = 0;
+        break;
+    }
+
+    // increment the turn counter
+    Mat B [11, 23] = Mat B [11, 23] + 1;
+}
+
+// show win screen
+O = 1; Prog("BATTLSUB");
+if (W == 0) {
+    Text(31, 48, "AI WINS!");
+} else {
+    Text(31, 48, "YOU WIN!");
+}
+
+stop;
