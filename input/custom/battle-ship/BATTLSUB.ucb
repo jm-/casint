@@ -31,20 +31,20 @@ if (O == 2) {
     return;
 }
 
-// place the ship specified by S (1-5)
+// place the user ship specified by S (1-5)
 if (O == 3) {
     M = 1; N = 1; P = 0;
-    A = 0;
+    F = 0;
     do {
         // flash the ship
-        RclPict(9);
-        if (Frac(A/2) == 0) {
-            O = 4; Prog("BATTLSUB");
+        RclPict(5);
+        if (Frac(F/2) == 0) {
+            O = 4; Q = 10; Prog("BATTLSUB");
         }
         do {
-            A = A + 2;
+            F = F + 2;
             K = GetKey();
-        } while (K != 31 and K != 38 and K != 27 and K != 28 and K != 37 and K != 48 and A < 5);
+        } while (K != 31 and K != 38 and K != 27 and K != 28 and K != 37 and K != 48 and F < 5);
         if (K == 38 and M > 1) {
             M = M - 1;
         }
@@ -81,46 +81,295 @@ if (O == 3) {
         if (K == 31) {
             // check if this position is valid.
             // if so, break.
-            B = 0;
-            if (P == 0) {
-                // horizontal
-                for (A = M to M + S - 1) {
-                    if (Mat B [A, N] == 1) {
-                        B = 1;
-                        break;
-                    }
-                }
-            } else {
-                // vertical
-                for (A = N to N + S - 1) {
-                    if (Mat B [M, A] == 1) {
-                        B = 1;
-                        break;
-                    }
-                }
-            }
-
+            O = 6; Q = 10; Prog("BATTLSUB");
             if (B == 0) {
                 break;
             }
         }
 
-        A = 5 - A;
+        F = 5 - F;
 
     } while (1);
     return;
 }
 
-// draw ship of size S in (M, N) with position P (0 = h, 1 = v)
+// draw user ship of size S in (M, N) with position P (0 = h, 1 = v) and offset Q
 if (O == 4) {
-    if (P == 0) {
-        F_Line(6 * M + 63, 6 * N - 3, 6 * (M + S) + 57, 6 * N - 3);
-        F_Line(6 * M + 62, 6 * N - 2, 6 * (M + S) + 58, 6 * N - 2);
-        F_Line(6 * M + 63, 6 * N - 1, 6 * (M + S) + 57, 6 * N - 1);
+    if (Q == 0) {
+        B = 0;
     } else {
-        F_Line(6 * M + 62, 6 * N - 2, 6 * M + 62, 6 * (N + S) - 8);
-        F_Line(6 * M + 63, 6 * N - 3, 6 * M + 63, 6 * (N + S) - 7);
-        F_Line(6 * M + 64, 6 * N - 2, 6 * M + 64, 6 * (N + S) - 8);
+        B = 65;
     }
+    if (P == 0) {
+        F_Line(6 * M + B - 2, 6 * N - 3, 6 * (M + S) + B - 8, 6 * N - 3);
+        F_Line(6 * M + B - 3, 6 * N - 2, 6 * (M + S) + B - 7, 6 * N - 2);
+        F_Line(6 * M + B - 2, 6 * N - 1, 6 * (M + S) + B - 8, 6 * N - 1);
+    } else {
+        F_Line(6 * M + B - 3, 6 * N - 2, 6 * M + B - 3, 6 * (N + S) - 8);
+        F_Line(6 * M + B - 2, 6 * N - 3, 6 * M + B - 2, 6 * (N + S) - 7);
+        F_Line(6 * M + B - 1, 6 * N - 2, 6 * M + B - 1, 6 * (N + S) - 8);
+    }
+    return;
+}
+
+// place the AI ship specified by S (1-5)
+if (O == 5) {
+    while (1) {
+        // check a random position
+        M = Intg(10 * RandNum()) + 1;
+        N = Intg(10 * RandNum()) + 1;
+        P = Intg(2 * RandNum());
+        if (P == 0) {
+            // horizontal
+            if ((M + S) <= 11) {
+                O = 6; Q = 0; Prog("BATTLSUB");
+                if (B == 0) {
+                    break;
+                }
+            }
+        } else {
+            // vertical
+            if ((N + S) <= 11) {
+                O = 6; Q = 0; Prog("BATTLSUB");
+                if (B == 0) {
+                    break;
+                }
+            }
+        }
+    }
+    return;
+}
+
+// counts how many blocks are occupied by a ship S in M, N, P and offset Q.
+// puts result in B
+if (O == 6) {
+    // counts occupied positions
+    B = 0;
+    if (P == 0) {
+        // horizontal
+        for (A = M to M + S - 1) {
+            if (Mat B [N, A + Q] > 0) {
+                B = B + 1;
+            }
+        }
+    } else {
+        // vertical
+        for (A = N to N + S - 1) {
+            if (Mat B [A, M + Q] > 0) {
+                B = B + 1;
+            }
+        }
+    }
+    return;
+}
+
+// stores ship T/S in M, N, P and offset Q
+if (O == 7) {
+    if (P == 0) {
+        // horizontal
+        for (A = M to M + S - 1) {
+            Mat B [N, A + Q] = T;
+        }
+    } else {
+        // vertical
+        for (A = N to N + S - 1) {
+            Mat B [A, M + Q] = T;
+        }
+    }
+    // store the remaining ship blocks
+    if (Q == 0) {
+        Mat B [T, 21] = S;
+        Mat B [T, 22] = S;
+        Mat B [T, 23] = M;
+        Mat B [T, 24] = N;
+        Mat B [T, 25] = P;
+    } else {
+        Mat B [T + 5, 21] = S;
+        Mat B [T + 5, 22] = S;
+        Mat B [T + 5, 23] = M;
+        Mat B [T + 5, 24] = N;
+        Mat B [T + 5, 25] = P;
+    }
+    return;
+}
+
+// user chooses cell X, Y
+if (O == 8) {
+    X = 1; Y = 1;
+    F = 0;
+    do {
+        // flash the cursor
+        RclPict(5);
+        if (Frac(F/2) == 0) {
+            F_Line(6 * X - 4, 6 * Y - 4, 6 * X - 4, 6 * Y + 0);
+            F_Line(6 * X + 0, 6 * Y - 4, 6 * X + 0, 6 * Y + 0);
+        }
+
+        do {
+            F = F + 2;
+            K = GetKey();
+        } while (K != 31 and K != 38 and K != 27 and K != 28 and K != 37 and F < 5);
+
+        if (K == 38 and X > 1) {
+            X = X - 1;
+        }
+        if (K == 27 and X <= 9) {
+            X = X + 1;
+        }
+        if (K == 28 and Y > 1) {
+            Y = Y - 1;
+        }
+        if (K == 37 and Y <= 9) {
+            Y = Y + 1;
+        }
+
+        if (K == 31) {
+            // check if this position is valid.
+            // if so, break.
+            if (Mat B [Y, X] < 10) {
+                break;
+            }
+        }
+
+        F = 5 - F;
+
+    } while (1);
+    return;
+}
+
+// stores the hit X, Y with offset Q
+if (O == 9) {
+    if (Q == 0) {
+        C = 0;
+    } else {
+        C = 65;
+    }
+
+    T = Mat B [Y, X + Q];
+    Mat B [Y, X + Q] = T + 10;
+
+    // draw the hit X
+    RclPict(5);
+    F_Line(6 * X + C - 4, 6 * Y - 4, 6 * X + C + 0, 6 * Y + 0);
+    F_Line(6 * X + C + 0, 6 * Y - 4, 6 * X + C - 4, 6 * Y + 0);
+
+    if (T > 0) {
+        // something was hit
+        if (Q == 0) {
+            // decrement the remaining block count on AI ship
+            B = Mat B [T, 21] - 1;
+            Mat B [T, 21] = B;
+            // decrement the total AI block count
+            Mat B [11, 21] = Mat B [11, 21] - 1;
+            // load ship that was hit
+            S = Mat B [T, 22];
+            M = Mat B [T, 23];
+            N = Mat B [T, 24];
+            P = Mat B [T, 25];
+        } else {
+            // decrement the remaining block count on our ship
+            B = Mat B [T + 5, 21] - 1;
+            Mat B [T + 5, 21] = B;
+            // decrement the total user block count
+            Mat B [11, 22] = Mat B [11, 22] - 1;
+            // load ship that was hit
+            S = Mat B [T + 5, 22];
+            M = Mat B [T + 5, 23];
+            N = Mat B [T + 5, 24];
+            P = Mat B [T + 5, 25];
+        }
+
+        if (B == 0) {
+            // sunk ship T; draw it
+            O = 4; Prog("BATTLSUB");
+
+        } else {
+            // draw an indeterminate part of the ship
+            F_Line(6 * X + C - 3, 6 * Y - 3, 6 * X + C - 1, 6 * Y - 3);
+            F_Line(6 * X + C - 3, 6 * Y - 2, 6 * X + C - 1, 6 * Y - 2);
+            F_Line(6 * X + C - 3, 6 * Y - 1, 6 * X + C - 1, 6 * Y - 1);
+
+        }
+    }
+
+    StoPict(5);
+    return;
+}
+
+// AI chooses cell X, Y
+if (O == 10) {
+    // pick up to 10 random unbombed positions and rank them
+    B = 100 - Mat B [11, 23];
+    if (B > 10) {
+        B = 10;
+    }
+    for (A = 1 to B) {
+        // find an unbombed position
+        do {
+            X = Intg(10 * RandNum()) + 1;
+            Y = Intg(10 * RandNum()) + 1;
+        } while (Mat B [Y, X + 10] >= 10);
+
+        // rank it
+        R = 0; H = 1; V = 1;
+
+        // how big is the surrounding horizontal space?
+        C = X - 1;
+        while (C >= 1 and Mat B [Y, C + 10] < 10) {
+            H = H + 1;
+            C = C - 1;
+        }
+        C = X + 1;
+        while (C <= 10 and Mat B [Y, C + 10] < 10) {
+            H = H + 1;
+            C = C + 1;
+        }
+
+        // how big is the surrounding vertical space?
+        C = Y - 1;
+        while (C >= 1 and Mat B [C, X] < 10) {
+            V = V + 1;
+            C = C - 1;
+        }
+        C = Y + 1;
+        while (C <= 10 and Mat B [C, X] < 10) {
+            V = V + 1;
+            C = C + 1;
+        }
+
+        // how many of our ships will fit horizontally?
+        for (T = 1 to 5) {
+            C = Mat B [T + 5, 21];
+            S = Mat B [T + 5, 22];
+            if (C == S) {
+                // if the ship is not hit at all
+                if (S <= H) {
+                    // ship fits horizontally
+                    R = R + 1;
+                }
+                if (S <= V) {
+                    // ship fits vertically
+                    R = R + 1;
+                }
+            }
+        }
+
+        // store the position
+        Mat B [11, 2 * A - 1] = X;
+        Mat B [11, 2 * A] = Y;
+        // store the rank
+        Mat B [A, 26] = R;
+    }
+
+    // set the X, Y of the highest rank
+    R = -1;
+    for (A = 1 to B) {
+        if ((Mat B [A, 26]) > R) {
+            R = Mat B [A, 26];
+            X = Mat B [11, 2 * A - 1];
+            Y = Mat B [11, 2 * A];
+        }
+    }
+
     return;
 }
