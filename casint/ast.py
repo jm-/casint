@@ -2,7 +2,17 @@ from .common import *
 
 
 class AST(object):
-    pass
+    def write_ucb(self, fp, indent):
+        raise NotImplementedError()
+
+
+class SpecialDebug(AST):
+    def __init__(self, token, arg1):
+        self.value = token.value
+        self.arg1 = arg1
+
+    def write_ucb(self, fp, indent):
+        pass
 
 
 class Comment(AST):

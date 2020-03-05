@@ -80,6 +80,9 @@ SEMI = b'SEMI'
 PROG = b'PROG'
 TEXT = b'TEXT'
 
+# special token types (debugging etc.)
+SPECIAL_DEBUG = b'SPECIAL_DEBUG'
+
 ALPHA_MEM_CHARS = b'ABCDEFGHIJKLMNOPQRSTUVWXYZ\xcd\xce\xd0'
 
 # table for G1M character set

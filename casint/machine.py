@@ -455,9 +455,24 @@ class CasioMachine(NodeVisitor):
             # didn't find it, pass it on
             raise GotoException(goto)
 
+    def _visit_SpecialDebug(self, node):
+        if node.value == b'DebugVar':
+            # print the var value
+            var = self.vars.get(node.arg1.value)
+            print(f"--- DEBUG --- (Var {translate_alpha_mem_char_to_ucb(node.arg1.value).decode('ascii')} [{var:.2f}])")
+        elif node.value == b'DebugMat':
+            # print the contents of the mat
+            mat = self.mats.get(node.arg1.value)
+            if mat:
+                print(f"--- DEBUG --- (Mat {node.arg1.value.decode('ascii')} [{len(mat)}, {len(mat[0])}])")
+                for row in mat:
+                    print(' '.join(f'{c:5.2f}' for c in row))
+            else:
+                print(f"--- DEBUG --- (Mat {node.arg1.value.decode('ascii')} [null])")
+        else:
+            raise Exception(f'Unknown SpecialDebug value type: {node.value}')
+
     def _visit_Program(self, node):
-        #for statement in node.children:
-        #    self._visit(statement)
         self._run_statements(node.children)
 
     def _visit_Comment(self, node):

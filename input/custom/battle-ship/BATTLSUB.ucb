@@ -203,6 +203,8 @@ if (O == 8) {
         if (Frac(F/2) == 0) {
             F_Line(6 * X - 4, 6 * Y - 4, 6 * X - 4, 6 * Y + 0);
             F_Line(6 * X + 0, 6 * Y - 4, 6 * X + 0, 6 * Y + 0);
+            F_Line(6 * X - 4, 6 * Y - 4, 6 * X + 0, 6 * Y - 4);
+            F_Line(6 * X - 4, 6 * Y + 0, 6 * X + 0, 6 * Y + 0);
         }
 
         do {
@@ -210,17 +212,29 @@ if (O == 8) {
             K = GetKey();
         } while (K != 31 and K != 38 and K != 27 and K != 28 and K != 37 and F < 5);
 
-        if (K == 38 and X > 1) {
+        if (K == 38) {
             X = X - 1;
+            if (X < 1) {
+                X = 10;
+            }
         }
-        if (K == 27 and X <= 9) {
+        if (K == 27) {
             X = X + 1;
+            if (X > 10) {
+                X = 1;
+            }
         }
-        if (K == 28 and Y > 1) {
+        if (K == 28) {
             Y = Y - 1;
+            if (Y < 1) {
+                Y = 10;
+            }
         }
-        if (K == 37 and Y <= 9) {
+        if (K == 37) {
             Y = Y + 1;
+            if (Y > 10) {
+                Y = 1;
+            }
         }
 
         if (K == 31) {
@@ -279,16 +293,13 @@ if (O == 9) {
             P = Mat B [T + 5, 25];
         }
 
+        // draw a +
+        F_Line(6 * X + C - 2, 6 * Y - 4, 6 * X + C - 2, 6 * Y + 0);
+        F_Line(6 * X + C + 0, 6 * Y - 2, 6 * X + C - 4, 6 * Y - 2);
+
         if (B == 0) {
             // sunk ship T; draw it
             O = 4; Prog("BATTLSUB");
-
-        } else {
-            // draw an indeterminate part of the ship
-            F_Line(6 * X + C - 3, 6 * Y - 3, 6 * X + C - 1, 6 * Y - 3);
-            F_Line(6 * X + C - 3, 6 * Y - 2, 6 * X + C - 1, 6 * Y - 2);
-            F_Line(6 * X + C - 3, 6 * Y - 1, 6 * X + C - 1, 6 * Y - 1);
-
         }
     }
 
@@ -296,8 +307,13 @@ if (O == 9) {
     return;
 }
 
-// AI chooses cell X, Y
+// AI chooses cell X, Y (main AI)
 if (O == 10) {
+    // change strategy if partway through bombing a ship
+    if (Mat B [11, 24] > 0) {
+        O = 11; Prog("BATTLSUB");
+        return;
+    }
     // pick up to 10 random unbombed positions and rank them
     B = 100 - Mat B [11, 23];
     if (B > 10) {
@@ -327,17 +343,20 @@ if (O == 10) {
 
         // how big is the surrounding vertical space?
         C = Y - 1;
-        while (C >= 1 and Mat B [C, X] < 10) {
+        while (C >= 1 and Mat B [C, X + 10] < 10) {
             V = V + 1;
             C = C - 1;
         }
         C = Y + 1;
-        while (C <= 10 and Mat B [C, X] < 10) {
+        while (C <= 10 and Mat B [C, X + 10] < 10) {
             V = V + 1;
             C = C + 1;
         }
 
-        // how many of our ships will fit horizontally?
+        DebugVar(H);
+        DebugVar(V);
+
+        // how many of our ships will fit?
         for (T = 1 to 5) {
             C = Mat B [T + 5, 21];
             S = Mat B [T + 5, 22];
@@ -372,4 +391,9 @@ if (O == 10) {
     }
 
     return;
+}
+
+// AI chooses cell X, Y (bombing AI)
+if (O == 11) {
+
 }
