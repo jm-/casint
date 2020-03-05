@@ -54,6 +54,10 @@ class UcbLexer(Lexer):
                 word = self.ucb_word()
                 #print(f'word: {word}')
 
+                # check for special keywords
+                if word in (b'DebugVar', b'DebugMat'):
+                    return Token(SPECIAL_DEBUG, word)
+
                 if word == b'label':
                     return Token(LBL, b'Lbl ')
 
@@ -276,6 +280,14 @@ class UcbParser(Parser):
     '''
     UCB has different syntax from G1M, but parses to the same AST tree.
     '''
+    def special_debug(self, token):
+        self.eat(token.type)
+        self.eat(LPAREN)
+        arg1 = self.variable()
+        self.eat(RPAREN)
+        return SpecialDebug(token, arg1)
+
+
     def statement_list(self):
         results = []
 
@@ -308,7 +320,11 @@ class UcbParser(Parser):
     def statement(self):
         token = self.current_token
 
-        if token.type == DIM:
+        # special tokens
+        if token.type == SPECIAL_DEBUG:
+            return self.special_debug(token)
+
+        elif token.type == DIM:
             return self.initialize_memory()
 
         return super().statement()
