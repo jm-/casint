@@ -421,6 +421,7 @@ class CasioMachine(NodeVisitor):
             if node.left.op.type == MAT:
                 x = self._visit(node.right[0])
                 y = self._visit(node.right[1])
+                print(f'getting mat {int(x-1)}/{int(y-1)}')
                 return self.mats[node.left.value][int(x-1)][int(y-1)]
             else:
                 raise Exception('Unknown memory index retrieval: {}'.format(node.left.op.type))
