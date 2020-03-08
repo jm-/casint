@@ -311,6 +311,12 @@ if (O == 9) {
 if (O == 10) {
     if (Mat B [11, 24] > 0) {
         // bombing strategy
+        // initialize vars A and B
+        // count of bombs that have not resulted in a sunk ship
+        // also points to the location of the latest hit
+        A = Mat B [11, 24];
+        // direction to bomb (0 = unknown, 1 = h, 2 = v)
+        B = Mat B [11, 25];
         O = 11;
     } else {
         // scouting strategy
@@ -318,28 +324,78 @@ if (O == 10) {
     }
     Prog("BATTLSUB");
 
+    DebugVar(X);
+    DebugVar(Y);
+
     // X, Y have been chosen. Check for hit
-    if (Mat B [Y, X + 10] > 0) {
-        // hit
+    T = Mat B [Y, X + 10];
+    if (T > 0) {
+        A = Mat B [11, 24];
+        // update bombing direction
+        if (A > 0) {
+            if (X == Mat B [11, 2 * A - 1]) {
+                Mat B [11, 25] = 2;
+            } else {
+                // y must be equal
+                Mat B [11, 25] = 1;
+            }
+        }
         // increment hit count
-        A = Mat B [11, 24] + 1;
+        A = A + 1;
         Mat B [11, 24] = A;
         // store the hit
         Mat B [11, 2 * A - 1] = X;
         Mat B [11, 2 * A] = Y;
+        // check for sink
+        if (Mat B [T + 5, 21] == 1) {
+            // reset bombing direction
+            Mat B [11, 25] = 0;
+            // load ship
+            S = Mat B [T + 5, 22];
+            M = Mat B [T + 5, 23];
+            N = Mat B [T + 5, 24];
+            P = Mat B [T + 5, 25];
+            // decrease hit count
+            Mat B [11, 24] = A - S;
+            // delete hits
+            for (C = 1 to S) {
+                for (B = 1 to A) {
+                    if (Mat B [11, 2 * B - 1] == M and Mat B [11, 2 * B] == N) {
+                        // delete the hit
+                        Mat B [11, 2 * B - 1] = 0;
+                        Mat B [11, 2 * B] = 0;
+                        break;
+                    }
+                }
+                if (P == 0) {
+                    M = M + 1;
+                } else {
+                    N = N + 1;
+                }
+            }
+            // pack hits
+            for (B = 1 to A - S) {
+                // check if position is empty
+                if (Mat B [11, 2 * B - 1] == 0) {
+                    // find the next non-empty position
+                    for (C = B + 1 to A) {
+                        if (Mat B [11, 2 * C - 1] > 0) {
+                            // shift hit
+                            Mat B [11, 2 * B - 1] = Mat B [11, 2 * C - 1];
+                            Mat B [11, 2 * B] = Mat B [11, 2 * C];
+                            break;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     return;
 }
 
-// AI chooses cell X, Y (bombing AI)
+// AI chooses cell X, Y (bombing AI). A (hit count) and B (direction) must have been set.
 if (O == 11) {
-    // count of bombs that have not resulted in a sunk ship
-    // also points to the location of the latest hit
-    A = Mat B [11, 24];
-    // direction to bomb (0 = unknown, 1 = h, 2 = v)
-    B = Mat B [11, 25];
-
     // load the latest hit
     X = Mat B [11, 2 * A - 1];
     Y = Mat B [11, 2 * A];
@@ -349,6 +405,71 @@ if (O == 11) {
 
     DebugVar(H);
     DebugVar(V);
+
+    if (B == 1) {
+        if (H > 1) {
+            // carry on bombing horizontally, there is space
+            O = 14; Prog("BATTLSUB");
+            return;
+        } else {
+            // load another hit and carry on horizontally
+            if (A > 1) {
+                A = A - 1;
+                O = 11; Prog("BATTLSUB");
+                return;
+            }
+        }
+    }
+
+    if (B == 2) {
+        if (V > 1) {
+            // carry on bombing vertically, there is space
+            O = 15; Prog("BATTLSUB");
+            return;
+        } else {
+            // load another hit and carry on horizontally
+            if (A > 1) {
+                A = A - 1;
+                O = 11; Prog("BATTLSUB");
+                return;
+            }
+        }
+    }
+
+    // clear bombing direction
+    Mat B [11, 25] = 0;
+
+    // how many unsunk ships will fit horizontally
+    I = 0;
+    W = 0;
+    for (T = 1 to 5) {
+        C = Mat B [T + 5, 21];
+        S = Mat B [T + 5, 22];
+        if (C > 0) {
+            // if the ship is not sunk
+            if (S <= H) {
+                // ship fits horizontally
+                I = I + 1;
+            }
+            if (S <= V) {
+                // ship fits vertically
+                W = W + 1;
+            }
+        }
+    }
+
+    DebugVar(I);
+    DebugVar(W);
+
+    if (I > W) {
+        // bomb horizontally
+        O = 14;
+    } else {
+        // bomb vertically
+        O = 15;
+    }
+
+    Prog("BATTLSUB")
 
     return;
 }
@@ -440,5 +561,29 @@ if (O == 13) {
         }
     }
 
+    return;
+}
+
+// horizontal bombing
+if (O == 14) {
+    if (X > 1 and Mat B [Y, X + 9] < 10) {
+        // left position is vacant
+        X = X - 1;
+    } else {
+        // right must be vacant
+        X = X + 1
+    }
+    return;
+}
+
+// vertical bombing
+if (O == 15) {
+    if (Y > 1 and Mat B [Y - 1, X + 10] < 10) {
+        // top position is vacant
+        Y = Y - 1;
+    } else {
+        // bottom must be vacant
+        Y = Y + 1
+    }
     return;
 }
