@@ -167,6 +167,19 @@
             "console": "integratedTerminal"
         },
         {
+            "name": "BATTLSHP (re-unpack)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/g1mtool.py",
+            "args": [
+                "unpack",
+                "input/pack/BATTLSHP.g1m",
+                "input/custom/battle-ship/unpack",
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
+        },
+        {
             "name": "BATTLSHP (from ucb to g1m pack)",
             "type": "python",
             "request": "launch",

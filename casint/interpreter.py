@@ -394,34 +394,34 @@ class Parser():
         return None
 
 
-    def expression(self):
-        node = self.and_expression()
+    def expression(self, eager=True):
+        node = self.and_expression(eager=eager)
 
-        while self.current_token.type == OR:
+        while eager and self.current_token.type == OR:
             token = self.current_token
             self.eat(OR)
 
-            node = BinOp(left=node, op=token, right=self.and_expression(), ucb_repr=b'or', g1m_repr=b'\x7f\xb1')
+            node = BinOp(left=node, op=token, right=self.and_expression(eager=eager), ucb_repr=b'or', g1m_repr=b'\x7f\xb1')
 
         return node
 
 
-    def and_expression(self):
-        node = self.compare_eq_neq_expression()
+    def and_expression(self, eager=True):
+        node = self.compare_eq_neq_expression(eager=eager)
 
-        while self.current_token.type == AND:
+        while eager and self.current_token.type == AND:
             token = self.current_token
             self.eat(AND)
 
-            node = BinOp(left=node, op=token, right=self.compare_eq_neq_expression(), ucb_repr=b'and', g1m_repr=b'\x7f\xb0')
+            node = BinOp(left=node, op=token, right=self.compare_eq_neq_expression(eager=eager), ucb_repr=b'and', g1m_repr=b'\x7f\xb0')
 
         return node
 
 
-    def compare_eq_neq_expression(self):
-        node = self.compare_lt_gt_expression()
+    def compare_eq_neq_expression(self, eager=True):
+        node = self.compare_lt_gt_expression(eager=eager)
 
-        while self.current_token.type in (EQ, NEQ):
+        while eager and self.current_token.type in (EQ, NEQ):
             token = self.current_token
             ucb_repr = None
             g1m_repr = None
@@ -435,15 +435,15 @@ class Parser():
                 ucb_repr = b'!='
                 g1m_repr = b'\x11'
 
-            node = BinOp(left=node, op=token, right=self.compare_lt_gt_expression(), ucb_repr=ucb_repr, g1m_repr=g1m_repr)
+            node = BinOp(left=node, op=token, right=self.compare_lt_gt_expression(eager=eager), ucb_repr=ucb_repr, g1m_repr=g1m_repr)
 
         return node
 
 
-    def compare_lt_gt_expression(self):
-        node = self.addition_subtraction_expression()
+    def compare_lt_gt_expression(self, eager=True):
+        node = self.addition_subtraction_expression(eager=eager)
 
-        while self.current_token.type in (LT, LTE, GTE, GT):
+        while eager and self.current_token.type in (LT, LTE, GTE, GT):
             token = self.current_token
             ucb_repr = None
             g1m_repr = None
@@ -465,15 +465,15 @@ class Parser():
                 ucb_repr = b'>'
                 g1m_repr = b'\x3e'
 
-            node = BinOp(left=node, op=token, right=self.addition_subtraction_expression(), ucb_repr=ucb_repr, g1m_repr=g1m_repr)
+            node = BinOp(left=node, op=token, right=self.addition_subtraction_expression(eager=eager), ucb_repr=ucb_repr, g1m_repr=g1m_repr)
 
         return node
 
 
-    def addition_subtraction_expression(self):
-        node = self.multiplication_division_expression()
+    def addition_subtraction_expression(self, eager=True):
+        node = self.multiplication_division_expression(eager=eager)
 
-        while self.current_token.type in (PLUS, MINUS):
+        while eager and self.current_token.type in (PLUS, MINUS):
             token = self.current_token
             ucb_repr = None
             g1m_repr = None
@@ -487,15 +487,15 @@ class Parser():
                 ucb_repr = b'-'
                 g1m_repr = b'\x99'
 
-            node = BinOp(left=node, op=token, right=self.multiplication_division_expression(), ucb_repr=ucb_repr, g1m_repr=g1m_repr)
+            node = BinOp(left=node, op=token, right=self.multiplication_division_expression(eager=eager), ucb_repr=ucb_repr, g1m_repr=g1m_repr)
 
         return node
 
 
-    def multiplication_division_expression(self):
+    def multiplication_division_expression(self, eager=True):
         node = self.unary_expression()
 
-        while self.current_token.type in (MUL, DIV):
+        while eager and self.current_token.type in (MUL, DIV):
             token = self.current_token
             ucb_repr = None
             g1m_repr = None
