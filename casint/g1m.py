@@ -542,7 +542,7 @@ class G1mParser(Parser):
 
     def unary_func(self, token, ucb_name, g1m_name):
         self.eat(token.type)
-        arg1 = self.expression()
+        arg1 = self.expression(eager=False)
         return UnaryFunc(token, ucb_name, g1m_name, arg1)
 
 

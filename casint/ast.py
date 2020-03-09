@@ -10,6 +10,24 @@ class AST(object):
         raise NotImplementedError()
 
 
+    def write_ucb_op(self, op, fp, indent):
+        if type(op) in (UnaryOp, BinOp):
+            fp.write(b'(')
+            op.write_ucb(fp, indent)
+            fp.write(b')')
+        else:
+            op.write_ucb(fp, indent)
+
+
+    def write_g1m_op(self, op, fp):
+        if type(op) in (UnaryOp, BinOp):
+            fp.write(b'(')
+            op.write_g1m(fp)
+            fp.write(b')')
+        else:
+            op.write_g1m(fp)
+
+
 class SpecialDebug(AST):
     def __init__(self, token, arg1):
         self.value = token.value
@@ -92,12 +110,12 @@ class UnaryOp(AST):
 
     def write_ucb(self, fp, indent):
         fp.write(self.ucb_repr)
-        self.expr.write_ucb(fp, indent)
+        self.write_ucb_op(self.expr, fp, indent)
 
 
     def write_g1m(self, fp):
         fp.write(self.g1m_repr)
-        self.expr.write_g1m(fp)
+        self.write_g1m_op(self.expr, fp)
 
 
 class BinOp(AST):
@@ -110,37 +128,17 @@ class BinOp(AST):
 
 
     def write_ucb(self, fp, indent):
-        if type(self.left) is BinOp:
-            fp.write(b'(')
-            self.left.write_ucb(fp, indent)
-            fp.write(b')')
-        else:
-            self.left.write_ucb(fp, indent)
+        self.write_ucb_op(self.left, fp, indent)
         fp.write(b' ')
         fp.write(self.ucb_repr)
         fp.write(b' ')
-        if type(self.right) is BinOp:
-            fp.write(b'(')
-            self.right.write_ucb(fp, indent)
-            fp.write(b')')
-        else:
-            self.right.write_ucb(fp, indent)
+        self.write_ucb_op(self.right, fp, indent)
 
 
     def write_g1m(self, fp):
-        if type(self.left) is BinOp:
-            fp.write(b'(')
-            self.left.write_g1m(fp)
-            fp.write(b')')
-        else:
-            self.left.write_g1m(fp)
+        self.write_g1m_op(self.left, fp)
         fp.write(self.g1m_repr)
-        if type(self.right) is BinOp:
-            fp.write(b'(')
-            self.right.write_g1m(fp)
-            fp.write(b')')
-        else:
-            self.right.write_g1m(fp)
+        self.write_g1m_op(self.right, fp)
 
 
 class Num(AST):
@@ -428,7 +426,9 @@ class UnaryFunc(AST):
 
     def write_g1m(self, fp):
         fp.write(self.g1m_name)
-        self.arg1.write_g1m(fp)
+        # check if this arg should be parameterized
+        # it should not be eagerly evaluated
+        self.write_g1m_op(self.arg1, fp)
 
 
 class BinaryBuiltin(AST):
