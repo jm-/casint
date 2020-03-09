@@ -397,7 +397,7 @@ class UcbParser(Parser):
         self.eat(LPAREN)
         arg1 = self.num_limited(1, 20)
         self.eat(RPAREN)
-        return UnaryBuiltin(token, b'StoPict', arg1)
+        return UnaryBuiltin(token, b'StoPict', b'\xf7\x93', arg1)
 
 
     def rclpict(self, token):
@@ -405,7 +405,7 @@ class UcbParser(Parser):
         self.eat(LPAREN)
         arg1 = self.num_limited(1, 20)
         self.eat(RPAREN)
-        return UnaryBuiltin(token, b'RclPict', arg1)
+        return UnaryBuiltin(token, b'RclPict', b'\xf7\x94', arg1)
 
 
     def prog(self, token):
@@ -413,47 +413,47 @@ class UcbParser(Parser):
         self.eat(LPAREN)
         arg1 = self.string_literal()
         self.eat(RPAREN)
-        return UnaryBuiltin(token, b'Prog', arg1)
+        return UnaryBuiltin(token, b'Prog', b'\xed', arg1)
 
 
-    def nullary_builtin(self, token, name):
+    def nullary_builtin(self, token, ucb_name, g1m_name):
         self.eat(token.type)
         self.eat(LPAREN)
         self.eat(RPAREN)
-        return NullaryBuiltin(token, name)
+        return NullaryBuiltin(token, ucb_name, g1m_name)
 
 
-    def nullary_func(self, token, name):
+    def nullary_func(self, token, ucb_name, g1m_name):
         self.eat(token.type)
         self.eat(LPAREN)
         self.eat(RPAREN)
-        return NullaryFunc(token, name)
+        return NullaryFunc(token, ucb_name, g1m_name)
 
 
-    def unary_builtin(self, token, name, fn1):
+    def unary_builtin(self, token, ucb_name, g1m_name, fn1):
         self.eat(token.type)
         self.eat(LPAREN)
         arg1 = fn1()
         self.eat(RPAREN)
-        return UnaryBuiltin(token, name, arg1)
+        return UnaryBuiltin(token, ucb_name, g1m_name, arg1)
 
 
-    def unary_func(self, token, name):
+    def unary_func(self, token, ucb_name, g1m_name):
         self.eat(token.type)
         self.eat(LPAREN)
         arg1 = self.expression()
         self.eat(RPAREN)
-        return UnaryFunc(token, name, arg1)
+        return UnaryFunc(token, ucb_name, g1m_name, arg1)
 
 
-    def binary_builtin(self, token, name):
+    def binary_builtin(self, token, ucb_name, g1m_name):
         self.eat(token.type)
         self.eat(LPAREN)
         arg1 = self.expression()
         self.eat(COMMA)
         arg2 = self.expression()
         self.eat(RPAREN)
-        return BinaryBuiltin(token, name, arg1, arg2)
+        return BinaryBuiltin(token, ucb_name, g1m_name, arg1, arg2)
 
 
     def pxltest(self, token):
@@ -463,7 +463,7 @@ class UcbParser(Parser):
         self.eat(COMMA)
         arg2 = self.expression()
         self.eat(RPAREN)
-        return BinaryFunc(token, b'PxlTest', arg1, arg2)
+        return BinaryFunc(token, b'PxlTest', b'\xf7\xaf', arg1, arg2)
 
 
     def text(self, token):
@@ -479,7 +479,7 @@ class UcbParser(Parser):
         else:
             arg3 = self.expression()
         self.eat(RPAREN)
-        return TernaryBuiltin(token, b'Text', arg1, arg2, arg3)
+        return TernaryBuiltin(token, b'Text', b'\xf7\xa5', arg1, arg2, arg3)
 
 
     def locate(self, token):
@@ -495,10 +495,10 @@ class UcbParser(Parser):
         else:
             arg3 = self.expression()
         self.eat(RPAREN)
-        return TernaryBuiltin(token, b'Locate', arg1, arg2, arg3)
+        return TernaryBuiltin(token, b'Locate', b'\xf7\x10', arg1, arg2, arg3)
 
 
-    def quaternary_builtin(self, token, name):
+    def quaternary_builtin(self, token, ucb_name, g1m_name):
         self.eat(token.type)
         self.eat(LPAREN)
         arg1 = self.expression()
@@ -509,10 +509,10 @@ class UcbParser(Parser):
         self.eat(COMMA)
         arg4 = self.expression()
         self.eat(RPAREN)
-        return QuaternaryBuiltin(token, name, arg1, arg2, arg3, arg4)
+        return QuaternaryBuiltin(token, ucb_name, g1m_name, arg1, arg2, arg3, arg4)
 
 
-    def senary_builtin(self, token, name):
+    def senary_builtin(self, token, ucb_name, g1m_name):
         self.eat(token.type)
         self.eat(LPAREN)
         arg1 = self.expression()
@@ -527,7 +527,7 @@ class UcbParser(Parser):
         self.eat(COMMA)
         arg6 = self.expression()
         self.eat(RPAREN)
-        return SenaryBuiltin(token, name, arg1, arg2, arg3, arg4, arg5, arg6)
+        return SenaryBuiltin(token, ucb_name, g1m_name, arg1, arg2, arg3, arg4, arg5, arg6)
 
 
     def assignment_statement(self):
