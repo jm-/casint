@@ -4,7 +4,6 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-
         {
             "name": "MAW~MIND (g1m)",
             "type": "python",
@@ -43,6 +42,30 @@
             "console": "integratedTerminal"
         },
         {
+            "name": "MAW~MIND (pack)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/g1mtool.py",
+            "args": [
+                "pack",
+                "output/maw-mind/",
+                "input/pack/MAW~MIND.g1m"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "MAW~MIND (from ucb to g1m pack)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/run.py",
+            "args": [
+                "input/pack/MAW~MIND.g1m"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
+        },
+        {
             "name": "PURE~~NC (unpack)",
             "type": "python",
             "request": "launch",
@@ -63,6 +86,19 @@
             "args": [
                 "output/pure--nc",
                 "PURE~N+C"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "PURE~~NC (pack)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/g1mtool.py",
+            "args": [
+                "pack",
+                "output/pure--nc/",
+                "input/pack/PURE~~NC.g1m"
             ],
             "cwd": "${workspaceFolder}",
             "console": "integratedTerminal"
@@ -93,6 +129,19 @@
             "console": "integratedTerminal"
         },
         {
+            "name": "SCUM2 (pack)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/g1mtool.py",
+            "args": [
+                "pack",
+                "output/scum2/",
+                "input/pack/SCUM2.g1m"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
+        },
+        {
             "name": "BATTLSHP (ucb)",
             "type": "python",
             "request": "launch",
@@ -100,6 +149,30 @@
             "args": [
                 "input/custom/battle-ship",
                 "BATTLSHP"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "BATTLSHP (pack)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/g1mtool.py",
+            "args": [
+                "pack",
+                "input/custom/battle-ship/",
+                "input/pack/BATTLSHP.g1m"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "BATTLSHP (from ucb to g1m pack)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/run.py",
+            "args": [
+                "input/pack/BATTLSHP.g1m"
             ],
             "cwd": "${workspaceFolder}",
             "console": "integratedTerminal"
@@ -122,7 +195,7 @@
             "program": "${workspaceFolder}/g1mtool.py",
             "args": [
                 "unpack",
-                "input/pict/PICT1.G1M",
+                "input/pict/PICT5.G1M",
                 "output/pict/"
             ],
             "cwd": "${workspaceFolder}",

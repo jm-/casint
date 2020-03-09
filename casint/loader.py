@@ -45,6 +45,10 @@ class CasioProgram(CasioItem):
         self.tree.write_ucb(fp, 0)
 
 
+    def write_g1m(self, fp):
+        self.tree.write_g1m(fp)
+
+
     def __str__(self):
         status = '(valid)' if self.tree else '(invalid)'
         # translate the title
@@ -100,7 +104,18 @@ class CasioItemCollection():
         self.program_count = len(self.get_programs())
 
 
+    def __iter__(self):
+        return iter(self.items)
+
+
+    def __len__(self):
+        return len(self.items)
+
+
     def get_program_by_name(self, name):
+        '''
+        Gets a program by its casio name.
+        '''
         for item in self.items:
             if type(item) is CasioProgram and item.name == name:
                 return item
@@ -171,6 +186,39 @@ class G1mFile():
         assert magic_sequence_2 == b'\x01'
 
         return num_items
+
+
+    def _write_header(self, fp, num_items):
+        # writes the g1m header to the first 32 bytes.
+        # assumes the current stream position is at the end of the file
+        total_file_size = fp.tell()
+        # rewind
+        fp.seek(0, 0)
+
+        # calculate the control bytes
+        lsb = total_file_size % 256
+        control_byte_1 = (lsb + 0x41) % 256
+        control_byte_2 = (lsb + 0xb8) % 256
+
+        # pack header
+        header_i_bytes = struct.pack(
+            '>8sB5sB1sIB9sH',
+            b'USBPower',
+            49,
+            b'\x00\x10\x00\x10\x00',
+            control_byte_1,
+            b'\x01',
+            total_file_size,
+            control_byte_2,
+            b'\xff\xff\xff\xff\xff\xff\xff\xff\xff',
+            num_items
+        )
+        # invert the header bits
+        header_i_bits = bitstring.Bits(bytes=header_i_bytes)
+        header_bits = ~header_i_bits
+        header_bytes = header_bits.tobytes()
+
+        fp.write(header_bytes)
 
 
     def _read_program(self, item_title, item_data):
@@ -244,6 +292,48 @@ class G1mFile():
             )
 
 
+    def _write_program(self, item, fp):
+        # write header 1
+        # item_identifier
+        fp.write(b'PROGRAM\x00\x00\x00\x00\x00\x00\x00\x00\x00')
+        # reserved_sequence_1
+        fp.write(b'\x00\x00\x00')
+        # item_header_type_identifier
+        fp.write(b'\x01')
+
+        # write header 2
+        # mem_location_name
+        fp.write(b'system\x00\x00')
+        # item_title
+        fp.write(item.name.ljust(8, b'\x00'))
+        # item_type_identifier
+        fp.write(b'\x01')
+        # item_length
+        # this needs to be written at the end
+        # store the stream position now and write an empty placeholder
+        item_length_stream_position = fp.tell()
+        fp.write(b'\x00\x00\x00\x00')
+        # reserved_sequence_2
+        fp.write(b'\x00\x00\x00')
+
+        # store the stream position now so we can calculate the item_length
+        pre_program_stream_position = fp.tell()
+        # first 10 bytes are reserved
+        fp.write(b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
+        # write program data
+        item.write_g1m(fp)
+        # write a null byte
+        fp.write(b'\x00')
+        # calculate item_length
+        post_program_stream_position = fp.tell()
+        item_length = post_program_stream_position - pre_program_stream_position
+        # rewind to write item_length
+        fp.seek(item_length_stream_position, 0)
+        fp.write(struct.pack('>I', item_length))
+        # seek back
+        fp.seek(post_program_stream_position, 0)
+
+
     def load(self):
         with open(self.filepath, 'rb') as fp:
             numItems = self._read_header(fp)
@@ -255,6 +345,32 @@ class G1mFile():
                 items[i] = self._read_item(fp)
                 i += 1
             return items
+
+
+    def write_items(self, items):
+        item_count = len(items)
+        with open(self.filepath, 'wb') as fp:
+            # skip the header til last; we need to write the filesize
+            fp.write(b'\x00' * 32)
+            # write items
+            items_written = 0
+            for item in items:
+                if type(item) is CasioProgram:
+                    self._write_program(item, fp)
+                    items_written += 1
+                elif type(item) is CasioPict:
+                    self._write_pict(item, fp)
+                    items_written += 1
+                else:
+                    # undefined, skip
+                    pass
+            # pad to nearest 4 bytes
+            bytes_written = fp.tell()
+            pad_length = 4 - (bytes_written % 4)
+            if pad_length > 0:
+                fp.write(b'\x00' * pad_length)
+            # g1m header can be written
+            self._write_header(fp, items_written)
 
 
 def get_item_name_from_filename(filename):
