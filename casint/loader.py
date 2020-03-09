@@ -204,7 +204,7 @@ class G1mFile():
         header_i_bytes = struct.pack(
             '>8sB5sB1sIB9sH',
             b'USBPower',
-            49,
+            0x31,
             b'\x00\x10\x00\x10\x00',
             control_byte_1,
             b'\x01',
@@ -222,7 +222,7 @@ class G1mFile():
 
 
     def _read_program(self, item_title, item_data):
-        # first 10 bytes are reserved
+        password = item_data[:8]
         lexer = G1mLexer(item_data[10:], self.filepath)
         parser = G1mParser(lexer)
         tree = parser.parse()
@@ -247,18 +247,16 @@ class G1mFile():
         item_header_1 = fp.read(20)
 
         (   item_identifier,
-            reserved_sequence_1,
-            item_header_type_identifier
-        ) = struct.unpack('>16s3sB', item_header_1)
+            sub_item_count
+        ) = struct.unpack('>16sI', item_header_1)
 
         if self.debug:
             print(f'item_identifier={item_identifier}')
-            print(f'reserved_sequence_1={reserved_sequence_1}')
-            print(f'item_header_type_identifier={item_header_type_identifier}')
+            print(f'sub_item_count={sub_item_count}')
 
-        # make sure we're dealing with a known item type,
+        # make sure the subitem count is 1,
         # so that item_header_2 can be safely decoded
-        assert item_header_type_identifier == 0x01
+        assert sub_item_count == 0x01
 
         item_header_2 = fp.read(24)
 
@@ -266,7 +264,7 @@ class G1mFile():
             item_title,
             item_type_identifier,
             item_length,
-            reserved_sequence_2
+            reserved_sequence
         ) = struct.unpack('>8s8sBI3s', item_header_2)
 
         if self.debug:
@@ -274,7 +272,7 @@ class G1mFile():
             print(f'item_title={item_title}')
             print(f'item_type_identifier={item_type_identifier}')
             print(f'item_length={item_length}')
-            print(f'reserved_sequence_2={reserved_sequence_2}')
+            print(f'reserved_sequence={reserved_sequence}')
 
         # read the rest of the item
         item_data = fp.read(item_length)
@@ -296,10 +294,8 @@ class G1mFile():
         # write header 1
         # item_identifier
         fp.write(b'PROGRAM\x00\x00\x00\x00\x00\x00\x00\x00\x00')
-        # reserved_sequence_1
-        fp.write(b'\x00\x00\x00')
-        # item_header_type_identifier
-        fp.write(b'\x01')
+        # sub_item_count
+        fp.write(b'\x00\x00\x00\x01')
 
         # write header 2
         # mem_location_name
@@ -313,23 +309,32 @@ class G1mFile():
         # store the stream position now and write an empty placeholder
         item_length_stream_position = fp.tell()
         fp.write(b'\x00\x00\x00\x00')
-        # reserved_sequence_2
+        # reserved_sequence
         fp.write(b'\x00\x00\x00')
 
         # store the stream position now so we can calculate the item_length
         pre_program_stream_position = fp.tell()
-        # first 10 bytes are reserved
-        fp.write(b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
+        # password
+        fp.write(b'\x00\x00\x00\x00\x00\x00\x00\x00')
+        # alignment
+        fp.write(b'\x00\x00')
         # write program data
         item.write_g1m(fp)
-        # write a null byte
-        fp.write(b'\x00')
+
         # calculate item_length
         post_program_stream_position = fp.tell()
         item_length = post_program_stream_position - pre_program_stream_position
+        # pad to nearest 4 bytes
+        pad_length = 4 - (item_length % 4)
+        if pad_length > 0:
+            fp.write(b'\x00' * pad_length)
+            item_length += pad_length
+            post_program_stream_position += pad_length
+
         # rewind to write item_length
         fp.seek(item_length_stream_position, 0)
         fp.write(struct.pack('>I', item_length))
+
         # seek back
         fp.seek(post_program_stream_position, 0)
 
@@ -364,11 +369,6 @@ class G1mFile():
                 else:
                     # undefined, skip
                     pass
-            # pad to nearest 4 bytes
-            bytes_written = fp.tell()
-            pad_length = 4 - (bytes_written % 4)
-            if pad_length > 0:
-                fp.write(b'\x00' * pad_length)
             # g1m header can be written
             self._write_header(fp, items_written)
 
