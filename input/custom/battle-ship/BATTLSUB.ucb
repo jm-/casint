@@ -37,7 +37,7 @@ if (O == 3) {
     F = 0;
     do {
         // flash the ship
-        RclPict(5);
+        Cls(); RclPict(5);
         if (Frac(F/2) == 0) {
             O = 4; Q = 10; Prog("BATTLSUB");
         }
@@ -199,7 +199,7 @@ if (O == 8) {
     F = 0;
     do {
         // flash the cursor
-        RclPict(5);
+        Cls(); RclPict(5);
         if (Frac(F/2) == 0) {
             F_Line(6 * X - 4, 6 * Y - 4, 6 * X - 4, 6 * Y + 0);
             F_Line(6 * X + 0, 6 * Y - 4, 6 * X + 0, 6 * Y + 0);
@@ -263,7 +263,7 @@ if (O == 9) {
     Mat B [Y, X + Q] = T + 10;
 
     // draw the hit X
-    RclPict(5);
+    Cls(); RclPict(5);
     F_Line(6 * X + C - 4, 6 * Y - 4, 6 * X + C + 0, 6 * Y + 0);
     F_Line(6 * X + C + 0, 6 * Y - 4, 6 * X + C - 4, 6 * Y + 0);
 
@@ -481,24 +481,28 @@ if (O == 12) {
 
     // how big is the surrounding horizontal space?
     C = X - 1;
-    while (C >= 1 and Mat B [Y, C + 10] < 10) {
+    while (C >= 1) {
+        if (Mat B [Y, C + 10] >= 10) { break; }
         H = H + 1;
         C = C - 1;
     }
     C = X + 1;
-    while (C <= 10 and Mat B [Y, C + 10] < 10) {
+    while (C <= 10) {
+        if (Mat B [Y, C + 10] >= 10) { break; }
         H = H + 1;
         C = C + 1;
     }
 
     // how big is the surrounding vertical space?
     C = Y - 1;
-    while (C >= 1 and Mat B [C, X + 10] < 10) {
+    while (C >= 1) {
+        if (Mat B [C, X + 10] >= 10) { break; }
         V = V + 1;
         C = C - 1;
     }
     C = Y + 1;
-    while (C <= 10 and Mat B [C, X + 10] < 10) {
+    while (C <= 10) {
+        if (Mat B [C, X + 10] >= 10) { break; }
         V = V + 1;
         C = C + 1;
     }
@@ -566,24 +570,28 @@ if (O == 13) {
 
 // horizontal bombing
 if (O == 14) {
-    if (X > 1 and Mat B [Y, X + 9] < 10) {
-        // left position is vacant
-        X = X - 1;
-    } else {
-        // right must be vacant
-        X = X + 1
+    if (X > 1) {
+        if (Mat B [Y, X + 9] < 10) {
+            // left position is vacant
+            X = X - 1;
+            return;
+        }
     }
+    // right must be vacant
+    X = X + 1
     return;
 }
 
 // vertical bombing
 if (O == 15) {
-    if (Y > 1 and Mat B [Y - 1, X + 10] < 10) {
-        // top position is vacant
-        Y = Y - 1;
-    } else {
-        // bottom must be vacant
-        Y = Y + 1
+    if (Y > 1) {
+        if (Mat B [Y - 1, X + 10] < 10) {
+            // top position is vacant
+            Y = Y - 1;
+            return;
+        }
     }
+    // bottom must be vacant
+    Y = Y + 1
     return;
 }
