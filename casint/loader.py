@@ -70,21 +70,56 @@ class CasioPict(CasioItem):
 
 
     def get_ucb_filename(self):
-        return f"{self.stringname}.ucp"
+        return f"{self.stringname}.bmp"
 
 
     def write_ucb(self, fp):
-        # write out characters for each pixel
-        x = 0
-        for pixel in self.image_bits:
-            if pixel:
-                fp.write(b'#')
-            else:
-                fp.write(b' ')
-            x += 1
-            if x == 128:
-                fp.write(b'\n')
-                x = 0
+        # write image as bmp
+        width = 128
+        height = 128
+        bytes_per_pixel = 3
+
+        # check that the image is 128x128
+        assert len(self.image_bits) == (128 * 128)
+
+        # BMP header
+        # filetype
+        fp.write(b'BM')
+        # entire file size (header + header + pixel data)
+        fp.write(struct.pack('<I', 14 + 40 + width * height * bytes_per_pixel))
+        # reserved (x2)
+        fp.write(b'\x00\x00')
+        fp.write(b'\x00\x00')
+        # pixel data offset (14 + 40 = 54)
+        fp.write(struct.pack('<I', 14 + 40))
+
+        # DIB header
+        # header size
+        fp.write(struct.pack('<I', 40))
+        # width x height
+        fp.write(struct.pack('<ii', width, height))
+        # planes
+        fp.write(struct.pack('<H', 1))
+        # bits per pixel
+        fp.write(struct.pack('<H', bytes_per_pixel * 8))
+        # compression
+        fp.write(struct.pack('<I', 0))
+        # image size
+        fp.write(struct.pack('<I', width * height * bytes_per_pixel))
+        # pixels per meter (unused)
+        fp.write(struct.pack('<ii', 0, 0))
+        # total colours, important colours
+        fp.write(struct.pack('<II', 0, 0))
+
+        # pixel data
+        # scan lines are written from the bottom left of the image
+        for y in range(127, -1, -1):
+            row = self.image_bits[y*128:y*128+128]
+            for pixel in row:
+                if pixel:
+                    fp.write(b'\x10\x10\x10')
+                else:
+                    fp.write(b'\xee\xe8\xe8')
 
 
     def __str__(self):
@@ -238,7 +273,7 @@ class G1mFile():
     def _read_pict(self, item_title, item_data):
         pict = CasioPict(
             item_title.partition(b'\x00')[0],
-            bitstring.Bits(bytes=item_data[:1024])
+            bitstring.Bits(bytes=item_data)
         )
         return pict
 
@@ -339,6 +374,29 @@ class G1mFile():
         fp.seek(post_program_stream_position, 0)
 
 
+    def _write_pict(self, item, fp):
+        # write header 1
+        # item_identifier
+        fp.write(b'PROGRAM\x00\x00\x00\x00\x00\x00\x00\x00\x00')
+        # sub_item_count
+        fp.write(b'\x00\x00\x00\x01')
+
+        # write header 2
+        # mem_location_name
+        fp.write(b'system\x00\x00')
+        # item_title
+        fp.write(item.name.ljust(8, b'\x00'))
+        # item_type_identifier
+        fp.write(b'\x07')
+        # item_length
+        fp.write(struct.pack('>I', 2048))
+        # reserved_sequence
+        fp.write(b'\x00\x00\x00')
+
+        # write pixel data
+        fp.write(item.image_bits.tobytes())
+
+
     def load(self):
         with open(self.filepath, 'rb') as fp:
             numItems = self._read_header(fp)
@@ -398,13 +456,22 @@ def load_program_from_ucb_file(filepath, progam_name):
 
 
 def load_pict_from_ucb_file(filepath, pict_name):
-    image_bits = bitstring.BitArray(length=128 * 64)
+    image_bits = bitstring.BitArray(length=128 * 128)
     with open(filepath, 'rb') as fp:
-        lines = fp.readlines()
-
-    for y, line in enumerate(lines):
-        for x, c in enumerate(line.rstrip(b'\r\n')):
-            image_bits[y * 128 + x] = (c != 0x20)
+        # skip past the headers
+        fp.seek(14 + 40, 0)
+        # read scan lines
+        for y in range(127, -1, -1):
+            line = fp.read(128 * 3)
+            i = 0
+            j = 3
+            k = 0
+            while j <= len(line):
+                pixel = line[i:j]
+                image_bits[y * 128 + k] = (pixel == b'\x10\x10\x10')
+                i += 3
+                j += 3
+                k += 1
 
     return CasioPict(pict_name, image_bits)
 
@@ -418,7 +485,7 @@ def load_items_from_ucb_dir(dirpath):
                 filepath,
                 get_item_name_from_filename(filename)
             )
-        elif filename.lower().endswith('.ucp'):
+        elif filename.lower().endswith('.bmp'):
             item = load_pict_from_ucb_file(
                 filepath,
                 get_item_name_from_filename(filename)

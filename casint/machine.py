@@ -217,7 +217,7 @@ class CasioMachine(NodeVisitor):
         height = 64
         pixelsize = 3
         bytecount = width * height * pixelsize
-        assert len(pict.image_bits) * pixelsize == bytecount
+        assert len(pict.image_bits) * pixelsize >= bytecount
 
         # create memory for pixel data
         new_p = (ctypes.c_uint8 * bytecount)()
@@ -227,10 +227,8 @@ class CasioMachine(NodeVisitor):
         m = memoryview(new_p).cast('B')
         i = 0
         j = pixelsize
-        for pixel in pict.image_bits:
+        for pixel in pict.image_bits[:width * height]:
             if pixel:
-
-
                 m[i:j] = b'\x10\x10\x10'
             else:
                 m[i:j] = b'\xee\xe8\xe8'
