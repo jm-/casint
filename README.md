@@ -25,8 +25,31 @@ If using Windows, it's sufficient to download a runtime binary from https://www.
 Drop the appropriate DLL in lib/32 or lib/64. Might need to create these directories.
 
 4. Run it!
+
 ```
 python run.py input/captures/SCUM2.G1M
+```
+
+## Tooling
+
+The program `g1mtool.py` can convert between G1M and text/image files. This makes it convenient to edit and debug programs. To unpack the contents of a G1M file into a directory, run
+
+```
+python g1mtool.py unpack input/captures/SCUM2.g1m output/scum2/
+```
+
+This will dump the parsed programs into text files with the `.ucb` file extension. Pictures will be dumped to 24-bit bitmap (`.bmp`) files.
+
+`g1mtool.py` can pack the contents of a directory back into a G1M file.
+
+```
+python g1mtool.py pack output/scum2/ input/pack/SCUM2.g1m
+```
+
+It is also possible to load the unpacked `.ucb` files directly into casint.
+
+```
+python run.py output/scum2/
 ```
 
 ## Comments
