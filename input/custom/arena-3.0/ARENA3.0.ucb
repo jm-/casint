@@ -1,11 +1,12 @@
 ClrText();
 
 // header
-Locate(1, 1, "===== ARENA 3.0 =====")
+Locate(1, 1, "===== ARENA 3.0 =====");
 
 // prompt
-Locate(3, 3, "A LION");
+O = 1; Prog("ARENASUB");
 Locate(3, 4, "ENTERS THE ARENA!");
+
 Locate(8, 6, "FIGHT?");
 
 // button labels

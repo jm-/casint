@@ -1,0 +1,19 @@
+// choose an opponent
+if (O == 1) {
+    A = Intg(5 * RandNum());
+    if (A == 0) {
+        Locate(3, 3, "A LION");
+    }
+    if (A == 1) {
+        Locate(3, 3, "A ZEBRA");
+    }
+    if (A == 2) {
+        Locate(3, 3, "A GIANT SPIDER");
+    }
+    if (A == 3) {
+        Locate(3, 3, "AN ANTELOPE");
+    }
+    if (A == 4) {
+        Locate(3, 3, "A RABID DOG");
+    }
+}
