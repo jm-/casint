@@ -1,0 +1,17 @@
+ClrText();
+
+// header
+Locate(1, 1, "===== ARENA 3.0 =====")
+
+// prompt
+Locate(3, 3, "A LION");
+Locate(3, 4, "ENTERS THE ARENA!");
+Locate(8, 6, "FIGHT?");
+
+// button labels
+Locate(1, 7, "YES");
+Locate(20, 7, "NO");
+
+do {
+    theta = GetKey();
+} while (theta != 31);

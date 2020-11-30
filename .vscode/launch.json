@@ -191,6 +191,17 @@
             "console": "integratedTerminal"
         },
         {
+            "name": "ARENA3.0 (ucb)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/run.py",
+            "args": [
+                "input/custom/arena-3.0"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
+        },
+        {
             "name": "DEBUG (ucb)",
             "type": "python",
             "request": "launch",
