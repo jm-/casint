@@ -1,0 +1,31 @@
+Cls();
+ViewWindow(1, 127, 0, 63, 1, 0);
+
+dim Mat W = (100, 1); // todo: could use a list?
+dim Mat G = (2, 5);
+
+// TEMPORARY! add a solution word
+O = 0;
+T = 0;
+W = 4;
+K = 46; Prog("WORDLSUB"); T = T + L * 26 ** 4;   // D
+K = 53; Prog("WORDLSUB"); T = T + L * 26 ** 3;   // R
+K = 36; Prog("WORDLSUB"); T = T + L * 26 ** 2;   // E
+K = 76; Prog("WORDLSUB"); T = T + L * 26;       // A
+K = 74; Prog("WORDLSUB"); T = T + L;            // M
+Mat W [W, 1] = T;
+DebugVar(T);
+
+B = 9;
+C = 5; // number of letters
+for (A=1 to 49 step B) {
+    for (F = 1 to C)
+    {
+        Text(A, F * B, "W");
+        F_Line(F * B, A + B - 3, F * B + B - 3, A + B - 3);
+    }
+}
+
+// extract the solution word
+O = 1; Prog("WORDLSUB");
+DebugMat(G);
