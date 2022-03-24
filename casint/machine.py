@@ -14,42 +14,68 @@ ASPECT_RATIO = 2.0
 
 DEFAULT_CASIO_GETKEY = 0
 SDL_CASIO_KEYMAP = {
-	sdl2.SDLK_UP		: 28,
-	sdl2.SDLK_RIGHT		: 27,
-	sdl2.SDLK_DOWN		: 37,
-	sdl2.SDLK_LEFT		: 38,
-	sdl2.SDLK_RETURN	: 31,
-	sdl2.SDLK_0			: 71,
-	sdl2.SDLK_1			: 72,
-	sdl2.SDLK_2			: 62,
-	sdl2.SDLK_3			: 52,
-	sdl2.SDLK_4			: 73,
-	sdl2.SDLK_5			: 63,
-	sdl2.SDLK_6			: 53,
-	sdl2.SDLK_7			: 74,
-	sdl2.SDLK_8			: 64,
-	sdl2.SDLK_9			: 54,
-	sdl2.SDLK_PERIOD	: 61,
-	sdl2.SDLK_KP_0		: 71,
-	sdl2.SDLK_KP_1		: 72,
-	sdl2.SDLK_KP_2		: 62,
-	sdl2.SDLK_KP_3		: 52,
-	sdl2.SDLK_KP_4		: 73,
-	sdl2.SDLK_KP_5		: 63,
-	sdl2.SDLK_KP_6		: 53,
-	sdl2.SDLK_KP_7		: 74,
-	sdl2.SDLK_KP_8		: 64,
-	sdl2.SDLK_KP_9		: 54,
-	sdl2.SDLK_KP_PERIOD	: 61,
-	sdl2.SDLK_F1		: 79,
-	sdl2.SDLK_F2		: 69,
-	sdl2.SDLK_F3		: 59,
-	sdl2.SDLK_F4		: 49,
-	sdl2.SDLK_F5		: 39,
-	sdl2.SDLK_F6		: 29,
-	sdl2.SDLK_ESCAPE	: 47,
-	sdl2.SDLK_LCTRL		: 48,
-	sdl2.SDLK_RCTRL		: 48
+    sdl2.SDLK_UP: 28,
+    sdl2.SDLK_RIGHT: 27,
+    sdl2.SDLK_DOWN: 37,
+    sdl2.SDLK_LEFT: 38,
+    sdl2.SDLK_RETURN: 31,
+    sdl2.SDLK_0: 71,
+    sdl2.SDLK_1: 72,
+    sdl2.SDLK_2: 62,
+    sdl2.SDLK_3: 52,
+    sdl2.SDLK_4: 73,
+    sdl2.SDLK_5: 63,
+    sdl2.SDLK_6: 53,
+    sdl2.SDLK_7: 74,
+    sdl2.SDLK_8: 64,
+    sdl2.SDLK_9: 54,
+    sdl2.SDLK_PERIOD: 61,
+    sdl2.SDLK_KP_0: 71,
+    sdl2.SDLK_KP_1: 72,
+    sdl2.SDLK_KP_2: 62,
+    sdl2.SDLK_KP_3: 52,
+    sdl2.SDLK_KP_4: 73,
+    sdl2.SDLK_KP_5: 63,
+    sdl2.SDLK_KP_6: 53,
+    sdl2.SDLK_KP_7: 74,
+    sdl2.SDLK_KP_8: 64,
+    sdl2.SDLK_KP_9: 54,
+    sdl2.SDLK_KP_PERIOD: 61,
+    sdl2.SDLK_F1: 79,
+    sdl2.SDLK_F2: 69,
+    sdl2.SDLK_F3: 59,
+    sdl2.SDLK_F4: 49,
+    sdl2.SDLK_F5: 39,
+    sdl2.SDLK_F6: 29,
+    sdl2.SDLK_ESCAPE: 47,
+    sdl2.SDLK_LCTRL: 48,
+    sdl2.SDLK_RCTRL: 48,
+    sdl2.SDLK_a: 76,
+    sdl2.SDLK_b: 66,
+    sdl2.SDLK_c: 56,
+    sdl2.SDLK_d: 46,
+    sdl2.SDLK_e: 36,
+    sdl2.SDLK_f: 26,
+    sdl2.SDLK_g: 75,
+    sdl2.SDLK_h: 65,
+    sdl2.SDLK_i: 55,
+    sdl2.SDLK_j: 45,
+    sdl2.SDLK_k: 35,
+    sdl2.SDLK_l: 25,
+    sdl2.SDLK_m: 74,
+    sdl2.SDLK_n: 64,
+    sdl2.SDLK_o: 54,
+    sdl2.SDLK_p: 73,
+    sdl2.SDLK_q: 63,
+    sdl2.SDLK_r: 53,
+    sdl2.SDLK_s: 43,
+    sdl2.SDLK_t: 33,
+    sdl2.SDLK_u: 72,
+    sdl2.SDLK_v: 62,
+    sdl2.SDLK_w: 52,
+    sdl2.SDLK_x: 42,
+    sdl2.SDLK_y: 32,
+    sdl2.SDLK_z: 71,
 }
 
 
@@ -105,7 +131,7 @@ class CasioMachine(NodeVisitor):
         # initialize all vars to 0
         self.vars = dict()
         for i in range(len(ALPHA_MEM_CHARS)):
-            v = ALPHA_MEM_CHARS[i:i+1]
+            v = ALPHA_MEM_CHARS[i:i + 1]
             self.vars[v] = 0
 
     def _initialize_mats(self):
@@ -152,8 +178,10 @@ class CasioMachine(NodeVisitor):
         self._clear_screen()
         self._render_end()
 
-        self.font_graph, self.font_graph_inverted = self._load_texture('img/font_graph.bmp')
-        self.font_text, self.font_text_inverted = self._load_texture('img/font_text.bmp')
+        self.font_graph, self.font_graph_inverted = self._load_texture(
+            'img/font_graph.bmp')
+        self.font_text, self.font_text_inverted = self._load_texture(
+            'img/font_text.bmp')
 
     def _initialize_text(self):
         self.text_line = 0
@@ -209,7 +237,6 @@ class CasioMachine(NodeVisitor):
         sdl2.SDL_FreeSurface(surface)
         return texture, inverted_texture
 
-
     def _create_texture_from_pict(self, pict):
         print(f'Initializing pict: {pict.stringname}')
 
@@ -256,9 +283,11 @@ class CasioMachine(NodeVisitor):
 
     def _set_color(self, is_on):
         if is_on:
-            sdl2.SDL_SetRenderDrawColor(self.renderer, 0x10, 0x10, 0x10, sdl2.SDL_ALPHA_OPAQUE)
+            sdl2.SDL_SetRenderDrawColor(
+                self.renderer, 0x10, 0x10, 0x10, sdl2.SDL_ALPHA_OPAQUE)
         else:
-            sdl2.SDL_SetRenderDrawColor(self.renderer, 0xe8, 0xe8, 0xee, sdl2.SDL_ALPHA_OPAQUE)
+            sdl2.SDL_SetRenderDrawColor(
+                self.renderer, 0xe8, 0xe8, 0xee, sdl2.SDL_ALPHA_OPAQUE)
 
     def _clear_screen(self):
         self._set_color(False)
@@ -404,12 +433,14 @@ class CasioMachine(NodeVisitor):
             if node.left.op.type == MAT:
                 x = self._visit(node.right[0])
                 y = self._visit(node.right[1])
-                self.mats[node.left.value][int(x-1)][int(y-1)] = value
+                self.mats[node.left.value][int(x - 1)][int(y - 1)] = value
             else:
-                raise Exception('Unknown memory index assignment: {}'.format(node.left.op.type))
+                raise Exception(
+                    'Unknown memory index assignment: {}'.format(node.left.op.type))
 
         else:
-            raise Exception('Unknown variable assignment node: {}'.format(type(node).__name__))
+            raise Exception(
+                'Unknown variable assignment node: {}'.format(type(node).__name__))
 
     def _retrieve(self, node):
         if type(node) is Var:
@@ -419,12 +450,14 @@ class CasioMachine(NodeVisitor):
             if node.left.op.type == MAT:
                 x = self._visit(node.right[0])
                 y = self._visit(node.right[1])
-                return self.mats[node.left.value][int(x-1)][int(y-1)]
+                return self.mats[node.left.value][int(x - 1)][int(y - 1)]
             else:
-                raise Exception('Unknown memory index retrieval: {}'.format(node.left.op.type))
+                raise Exception(
+                    'Unknown memory index retrieval: {}'.format(node.left.op.type))
 
         else:
-            raise Exception('Unknown variable retrieval node: {}'.format(type(node).__name__))
+            raise Exception(
+                'Unknown variable retrieval node: {}'.format(type(node).__name__))
 
     def _eval_bool(self, node):
         value = self._visit(node)
@@ -457,16 +490,19 @@ class CasioMachine(NodeVisitor):
         if node.value == b'DebugVar':
             # print the var value
             var = self.vars.get(node.arg1.value)
-            print(f"--- DEBUG --- (Var {translate_alpha_mem_char_to_ucb(node.arg1.value).decode('ascii')} [{var:.2f}])")
+            print(
+                f"--- DEBUG --- (Var {translate_alpha_mem_char_to_ucb(node.arg1.value).decode('ascii')} [{var:.2f}])")
         elif node.value == b'DebugMat':
             # print the contents of the mat
             mat = self.mats.get(node.arg1.value)
             if mat:
-                print(f"--- DEBUG --- (Mat {node.arg1.value.decode('ascii')} [{len(mat)}, {len(mat[0])}])")
+                print(
+                    f"--- DEBUG --- (Mat {node.arg1.value.decode('ascii')} [{len(mat)}, {len(mat[0])}])")
                 for row in mat:
                     print(' '.join(f'{c:5.2f}' for c in row))
             else:
-                print(f"--- DEBUG --- (Mat {node.arg1.value.decode('ascii')} [null])")
+                print(
+                    f"--- DEBUG --- (Mat {node.arg1.value.decode('ascii')} [null])")
         else:
             raise Exception(f'Unknown SpecialDebug value type: {node.value}')
 
@@ -487,7 +523,8 @@ class CasioMachine(NodeVisitor):
             assert self._visit(node.arg5) == 1
             assert self._visit(node.arg6) == 0
         else:
-            raise Exception('Unknown SenaryBuiltin op type: {}'.format(node.op.type))
+            raise Exception(
+                'Unknown SenaryBuiltin op type: {}'.format(node.op.type))
 
     def _visit_QuaternaryBuiltin(self, node):
         if node.op.type == FLINE:
@@ -501,7 +538,8 @@ class CasioMachine(NodeVisitor):
             self._render_end()
             self._handle_events(pump=False)
         else:
-            raise Exception('Unknown QuaternaryBuiltin op type: {}'.format(node.op.type))
+            raise Exception(
+                'Unknown QuaternaryBuiltin op type: {}'.format(node.op.type))
 
     def _visit_TernaryBuiltin(self, node):
         if node.op.type == TEXT:
@@ -531,7 +569,8 @@ class CasioMachine(NodeVisitor):
             self._render_end()
             self._handle_events(pump=False)
         else:
-            raise Exception('Unknown TernaryBuiltin op type: {}'.format(node.op.type))
+            raise Exception(
+                'Unknown TernaryBuiltin op type: {}'.format(node.op.type))
 
     def _visit_BinaryBuiltin(self, node):
         if node.op.type == PXLON:
@@ -551,7 +590,8 @@ class CasioMachine(NodeVisitor):
             self._render_end()
             self._handle_events(pump=False)
         else:
-            raise Exception('Unknown BinaryBuiltin op type: {}'.format(node.op.type))
+            raise Exception(
+                'Unknown BinaryBuiltin op type: {}'.format(node.op.type))
 
     def _visit_BinaryFunc(self, node):
         if node.op.type == PXLTEST:
@@ -562,7 +602,8 @@ class CasioMachine(NodeVisitor):
             self._render_end()
             return 1 if is_lit else 0
         else:
-            raise Exception('Unknown BinaryFunc op type: {}'.format(node.op.type))
+            raise Exception(
+                'Unknown BinaryFunc op type: {}'.format(node.op.type))
 
     def _visit_UnaryBuiltin(self, node):
         if node.op.type == HORIZONTAL:
@@ -590,7 +631,8 @@ class CasioMachine(NodeVisitor):
             s = self._visit(node.arg1)
             self._locate_out(s)
         else:
-            raise Exception('Unknown UnaryBuiltin op type: {}'.format(node.op.type))
+            raise Exception(
+                'Unknown UnaryBuiltin op type: {}'.format(node.op.type))
 
     def _visit_UnaryFunc(self, node):
         if node.op.type == INTG:
@@ -600,7 +642,8 @@ class CasioMachine(NodeVisitor):
             value = self._visit(node.arg1)
             return float(value - int(value))
         else:
-            raise Exception('Unknown UnaryFunc op type: {}'.format(node.op.type))
+            raise Exception(
+                'Unknown UnaryFunc op type: {}'.format(node.op.type))
 
     def _visit_KeywordBuiltin(self, node):
         if node.op.type == BREAK:
@@ -610,7 +653,8 @@ class CasioMachine(NodeVisitor):
         elif node.op.type == STOP:
             raise ProgramStopException()
         else:
-            raise Exception('Unknown KeywordBuiltin op type: {}'.format(node.op.type))
+            raise Exception(
+                'Unknown KeywordBuiltin op type: {}'.format(node.op.type))
 
     def _visit_NullaryBuiltin(self, node):
         if node.op.type == CLS:
@@ -629,7 +673,8 @@ class CasioMachine(NodeVisitor):
         elif node.op.type == STOP:
             raise ProgramStopException()
         else:
-            raise Exception('Unknown NullaryBuiltin op type: {}'.format(node.op.type))
+            raise Exception(
+                'Unknown NullaryBuiltin op type: {}'.format(node.op.type))
 
     def _visit_NullaryFunc(self, node):
         if node.op.type == GETKEY:
@@ -637,7 +682,8 @@ class CasioMachine(NodeVisitor):
         elif node.op.type == RANDNUM:
             return float(rand_num())
         else:
-            raise Exception('Unknown NullaryFunc op type: {}'.format(node.op.type))
+            raise Exception(
+                'Unknown NullaryFunc op type: {}'.format(node.op.type))
 
     def _visit_Num(self, node):
         return node.value
@@ -659,9 +705,11 @@ class CasioMachine(NodeVisitor):
         x = self._visit(node.dimensions[0])
         y = self._visit(node.dimensions[1])
         if node.mem_struct.op.type == MAT:
-            self.mats[node.mem_struct.value] = [[0 for j in range(int(y))] for i in range(int(x))]
+            self.mats[node.mem_struct.value] = [
+                [0 for j in range(int(y))] for i in range(int(x))]
         else:
-            raise Exception('Unknown memory index initialization: {}'.format(node.mem_struct.op.type))
+            raise Exception('Unknown memory index initialization: {}'.format(
+                node.mem_struct.op.type))
 
     def _visit_BinOp(self, node):
         if node.op.type == PLUS:
@@ -722,7 +770,7 @@ class CasioMachine(NodeVisitor):
         stepvalue = self._visit(node.step)
         endvalue = self._visit(node.end)
 
-        check_fn = lambda x: x == endvalue
+        def check_fn(x): return x == endvalue
 
         if currentvalue < endvalue:
             if stepvalue <= 0:
@@ -732,9 +780,9 @@ class CasioMachine(NodeVisitor):
                     f' step={stepvalue}'
                     f' end={endvalue}'
                 )
-                check_fn = lambda x: False
+                def check_fn(x): return False
             else:
-                check_fn = lambda x: x <= endvalue
+                def check_fn(x): return x <= endvalue
 
         elif currentvalue > endvalue:
             if stepvalue >= 0:
@@ -744,9 +792,9 @@ class CasioMachine(NodeVisitor):
                     f' step={stepvalue}'
                     f' end={endvalue}'
                 )
-                check_fn = lambda x: False
+                def check_fn(x): return False
             else:
-                check_fn = lambda x: x >= endvalue
+                def check_fn(x): return x >= endvalue
 
         self._assign(currentvalue, node.var)
         alive = check_fn(currentvalue)
