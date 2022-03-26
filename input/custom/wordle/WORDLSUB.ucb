@@ -29,15 +29,15 @@ if (O == 0) {
     return;
 }
 
-// extract the solution word to Mat G [2, *]
+// extract the solution word to Mat G [1, *]
 if (O == 1)
 {
-    C = Mat W [W, 1];           // set C
+    C = W;                      // set C
     for (A = 1 to 5)
     {
         B = 26 ** (5 - A);      // divisor
         L = Intg(C / B);        // get the letter
         C = C - B * L;          // update C
-        Mat G [2, A] = L;       // store the letter
+        Mat G [1, A] = L;       // store the letter
     }
 }
