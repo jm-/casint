@@ -191,6 +191,31 @@
             "console": "integratedTerminal"
         },
         {
+            "name": "WORDLE (ucb)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/run.py",
+            "args": [
+                "input/custom/wordle",
+                "WORDLE"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "WORDLE (pack)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/g1mtool.py",
+            "args": [
+                "pack",
+                "input/custom/wordle/",
+                "input/pack/WORDLE.g1m"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
+        },
+        {
             "name": "DEBUG (ucb)",
             "type": "python",
             "request": "launch",
