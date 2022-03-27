@@ -19,6 +19,7 @@ SDL_CASIO_KEYMAP = {
     sdl2.SDLK_DOWN: 37,
     sdl2.SDLK_LEFT: 38,
     sdl2.SDLK_RETURN: 31,
+    sdl2.SDLK_BACKSPACE: 44,
     sdl2.SDLK_0: 71,
     sdl2.SDLK_1: 72,
     sdl2.SDLK_2: 62,

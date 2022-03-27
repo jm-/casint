@@ -476,6 +476,7 @@ class UcbParser(Parser):
         arg3 = None
         if self.current_token.type == STRING:
             arg3 = self.string_literal()
+            arg3.value = translate_ascii_bytes_to_casio(arg3.value)
         else:
             arg3 = self.expression()
         self.eat(RPAREN)
@@ -492,6 +493,7 @@ class UcbParser(Parser):
         arg3 = None
         if self.current_token.type == STRING:
             arg3 = self.string_literal()
+            arg3.value = translate_ascii_bytes_to_casio(arg3.value)
         else:
             arg3 = self.expression()
         self.eat(RPAREN)

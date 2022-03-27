@@ -26,18 +26,93 @@ if (O == 0) {
     else if (K == 42) { L = 24; }
     else if (K == 32) { L = 25; }
     else if (K == 71) { L = 26; }
+    else { L = 0; }
     return;
 }
 
 // extract the solution word to Mat G [1, *]
 if (O == 1)
 {
-    C = W;                      // set C
-    for (A = 1 to 5)
+    T = W;                      // set T
+    for (B = 1 to 5)
     {
-        B = 26 ** (5 - A);      // divisor
-        L = Intg(C / B);        // get the letter
-        C = C - B * L;          // update C
-        Mat G [1, A] = L;       // store the letter
+        D = 26 ** (5 - B);      // divisor
+        L = Intg(T / D);        // get the letter
+        T = T - D * L;          // update T
+        Mat G [1, B] = L;       // store the letter
     }
+    return;
+}
+
+// print the letter L at X, Y
+if (O == 2)
+{
+    if (L == 1) { Text(Y, X, "A"); }
+    else if (L == 2) { Text(Y, X, "B"); }
+    else if (L == 3) { Text(Y, X, "C"); }
+    else if (L == 4) { Text(Y, X, "D"); }
+    else if (L == 5) { Text(Y, X, "E"); }
+    else if (L == 6) { Text(Y, X, "F"); }
+    else if (L == 7) { Text(Y, X, "G"); }
+    else if (L == 8) { Text(Y, X, "H"); }
+    else if (L == 9) { Text(Y, X, "I"); }
+    else if (L == 10) { Text(Y, X, "J"); }
+    else if (L == 11) { Text(Y, X, "K"); }
+    else if (L == 12) { Text(Y, X, "L"); }
+    else if (L == 13) { Text(Y, X, "M"); }
+    else if (L == 14) { Text(Y, X, "N"); }
+    else if (L == 15) { Text(Y, X, "O"); }
+    else if (L == 16) { Text(Y, X, "P"); }
+    else if (L == 17) { Text(Y, X, "Q"); }
+    else if (L == 18) { Text(Y, X, "R"); }
+    else if (L == 19) { Text(Y, X, "S"); }
+    else if (L == 20) { Text(Y, X, "T"); }
+    else if (L == 21) { Text(Y, X, "U"); }
+    else if (L == 22) { Text(Y, X, "V"); }
+    else if (L == 23) { Text(Y, X, "W"); }
+    else if (L == 24) { Text(Y, X, "X"); }
+    else if (L == 25) { Text(Y, X, "Y"); }
+    else if (L == 26) { Text(Y, X, "Z"); }
+    return;
+}
+
+// score the current word
+if (O == 3)
+{
+    S = 0;
+    // zero out scores
+    for (B = 1 to 5)
+    {
+        Mat G [3, B] = 0;
+    }
+    // determine scores
+    for (B = 1 to 5)
+    {
+        X = B * D - 6;
+        if (Mat G [2, B] == Mat G [1, B])
+        {
+            // correct letter & place
+            Mat G [3, B] = 2;
+            S = S + 2;
+            F_Line(B * D - 8, A * D - 8, B * D + 0, A * D - 8);
+            F_Line(B * D + 0, A * D - 8, B * D + 0, A * D + 0);
+            F_Line(B * D + 0, A * D + 0, B * D - 8, A * D + 0);
+            F_Line(B * D - 8, A * D + 0, B * D - 8, A * D - 8);
+        }
+        else
+        {
+            for (I = 1 to 5)
+            {
+                if (B != I and Mat G [3, I] == 0 and Mat G [2, B] == Mat G [1, I])
+                {
+                    // correct letter
+                    Mat G [3, I] = 1;
+                    S = S + 1;
+                    F_Line(B * D + 0, A * D + 0, B * D - 8, A * D + 0);
+                    break;
+                }
+            }
+        }
+    }
+    return;
 }
