@@ -86,8 +86,8 @@ SPECIAL_DEBUG = b'SPECIAL_DEBUG'
 ALPHA_MEM_CHARS = b'ABCDEFGHIJKLMNOPQRSTUVWXYZ\xcd\xce\xd0'
 
 # table for G1M character set
-CASIO_CHARS = b'\x89\x99\xab'
-ASCII_CHARS = b'\x2b\x7e\x21'
+CASIO_CHARS = b'\x89\x99\xab\xa8'
+ASCII_CHARS = b'\x2b\x7e\x21^'
 CASIO_TO_ASCII_TABLE = bytes.maketrans(CASIO_CHARS, ASCII_CHARS)
 ASCII_TO_CASIO_TABLE = bytes.maketrans(ASCII_CHARS, CASIO_CHARS)
 
